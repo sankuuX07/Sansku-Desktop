@@ -1,0 +1,3 @@
+C:/Users/sansk/OneDrive/Desktop/SanskyStream/windows/build/CMakeFiles/SanskyStream_Windows.dir
+C:/Users/sansk/OneDrive/Desktop/SanskyStream/windows/build/CMakeFiles/ALL_BUILD.dir
+C:/Users/sansk/OneDrive/Desktop/SanskyStream/windows/build/CMakeFiles/ZERO_CHECK.dir

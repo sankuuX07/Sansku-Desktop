@@ -1,0 +1,30 @@
+# Build directories
+build/
+**/build/
+
+# Visual Studio
+.vs/
+.vscode/
+
+# CMake
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+
+# Compiled binaries
+*.exe
+*.dll
+*.obj
+*.o
+*.pdb
+*.ilk
+*.lib
+*.exp
+
+# Logs
+*.log
+
+# Windows
+Thumbs.db
+Desktop.ini
