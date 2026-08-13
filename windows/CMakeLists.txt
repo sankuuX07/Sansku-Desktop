@@ -30,6 +30,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 # Link Windows libraries
 target_link_libraries(${PROJECT_NAME} PRIVATE
     user32
+    gdi32
     d3d11
     d3dcompiler
     mf

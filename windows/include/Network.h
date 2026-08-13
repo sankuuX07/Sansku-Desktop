@@ -1,33 +1,50 @@
 #pragma once
 
-#include "VideoReceiver.h"
-#include "AudioReceiver.h"
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <string>
 #include <thread>
 #include <atomic>
-#include <memory>
+#include <functional>
+#include <mutex>
 
 namespace SanskyStream {
 
+// TCP server that listens on a fixed port and accepts one client at a time.
+// All blocking socket work runs on a dedicated server thread, never on the UI thread.
 class Network {
 public:
-    Network(std::shared_ptr<VideoReceiver> videoRecv, std::shared_ptr<AudioReceiver> audioRecv);
+    Network();
     ~Network();
 
-    bool Connect(const std::string& ipAddress, uint16_t port);
-    void Disconnect();
+    Network(const Network&) = delete;
+    Network& operator=(const Network&) = delete;
+
+    // Start listening on the given port. Returns false if the socket cannot be opened.
+    bool StartServer(uint16_t port);
+
+    // Stop the server and join the server thread cleanly.
+    void StopServer();
+
+    // Thread-safe query of whether a client is currently connected.
+    bool IsClientConnected() const { return m_isConnected.load(); }
+
+    // Register a callback invoked (from the server thread) when status changes.
+    // Called with "Waiting for Device..." or "Connected".
+    void SetStatusCallback(std::function<void(const std::string&)> callback);
 
 private:
-    void ReceiveLoop();
+    void ServerThread();
 
-    std::shared_ptr<VideoReceiver> m_videoReceiver;
-    std::shared_ptr<AudioReceiver> m_audioReceiver;
+    std::function<void(const std::string&)> m_statusCallback;
 
-    SOCKET m_socket;
-    std::thread m_recvThread;
-    std::atomic<bool> m_isRunning;
+    SOCKET              m_listenSocket;
+    SOCKET              m_clientSocket;
+    std::mutex          m_clientSocketMutex;    // Guards m_clientSocket
+
+    std::thread         m_serverThread;
+    std::atomic<bool>   m_isRunning;
+    std::atomic<bool>   m_isConnected;
 };
 
 } // namespace SanskyStream

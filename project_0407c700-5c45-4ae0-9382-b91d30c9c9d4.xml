@@ -1,0 +1,33 @@
+<?xml version="1.0" ?>
+<xmeml version="4">
+   <project>
+      <name>Generated Shorts</name>
+      <children>
+         <sequence>
+            <name>Generated Shorts</name>
+            <rate>
+               <timebase>30</timebase>
+            </rate>
+            <media>
+               <video>
+                  <track>
+                     <clipitem id="clipitem-0">
+                        <name>DouWan_20260812_163642.mp4</name>
+                        <rate>
+                           <timebase>30</timebase>
+                        </rate>
+                        <file id="file-0">
+                           <pathurl>file://localhost/C:/Users/sansk/Videos/DouWan_20260812_163642.mp4</pathurl>
+                        </file>
+                        <in>0</in>
+                        <out>716</out>
+                        <start>0</start>
+                        <end>716</end>
+                     </clipitem>
+                  </track>
+               </video>
+            </media>
+         </sequence>
+      </children>
+   </project>
+</xmeml>

@@ -5,8 +5,10 @@ namespace SanskyStream {
 
 App::App() : m_isRunning(true) {
     LOG_INFO("Initializing Application...");
-    
-    // Create the main window
+
+    // -----------------------------------------------------------------------
+    // Window
+    // -----------------------------------------------------------------------
     m_window = std::make_unique<Window>(1280, 720, L"SanskyStream Client");
     if (!m_window->GetHWND()) {
         LOG_ERROR("Failed to initialize main window.");
@@ -14,7 +16,9 @@ App::App() : m_isRunning(true) {
         return;
     }
 
-    // Initialize Renderer
+    // -----------------------------------------------------------------------
+    // Renderer (D3D11 swap chain)
+    // -----------------------------------------------------------------------
     m_renderer = std::make_unique<Renderer>(m_window.get());
     if (!m_renderer->Initialize()) {
         LOG_ERROR("Failed to initialize renderer.");
@@ -22,26 +26,38 @@ App::App() : m_isRunning(true) {
         return;
     }
 
-    // Initialize Decoder
-    m_decoder = std::make_shared<Decoder>();
-    m_decoder->InitializeVideoDecoder();
-    m_decoder->InitializeAudioDecoder();
+    // -----------------------------------------------------------------------
+    // Network — TCP server on port 5000
+    // -----------------------------------------------------------------------
+    m_network = std::make_unique<Network>();
 
-    // Initialize Receivers
-    m_videoReceiver = std::make_shared<VideoReceiver>(m_decoder);
-    m_audioReceiver = std::make_shared<AudioReceiver>(m_decoder);
+    // Wire the status callback: network thread -> Window status text
+    m_network->SetStatusCallback([this](const std::string& status) {
+        OnNetworkStatus(status);
+    });
 
-    // Initialize Network
-    m_network = std::make_unique<Network>(m_videoReceiver, m_audioReceiver);
-    // TODO: Change to real server IP/Port
-    // m_network->Connect("127.0.0.1", 8080);
+    // Show a placeholder before the server socket is ready
+    m_window->SetStatusText("SanskyStream Client\r\n\r\nStatus: Initializing...\r\nPort: 5000");
+
+    if (!m_network->StartServer(5000)) {
+        LOG_WARN("Network server failed to start. Running without networking.");
+        m_window->SetStatusText("SanskyStream Client\r\n\r\nStatus: Network Error\r\nPort: 5000");
+    }
 }
 
 App::~App() {
     if (m_network) {
-        m_network->Disconnect();
+        m_network->StopServer();
     }
     LOG_INFO("Application shutting down.");
+}
+
+// Called from the network thread — only updates window state (fast, mutex-protected).
+void App::OnNetworkStatus(const std::string& status) {
+    if (m_window) {
+        m_window->SetStatusText("SanskyStream Client\r\n\r\nStatus: " +
+                                status + "\r\nPort: 5000");
+    }
 }
 
 void App::Run() {
@@ -50,16 +66,18 @@ void App::Run() {
     LOG_INFO("Application entering main loop.");
 
     while (m_isRunning) {
-        // Process Windows messages
+        // Process Windows messages — returns false on WM_QUIT
         if (!m_window->ProcessMessages()) {
-            // WM_QUIT received
             m_isRunning = false;
             break;
         }
 
-        // Render Frame
-        m_renderer->ClearColor(0.1f, 0.2f, 0.4f, 1.0f); // Blueish clear color
-        m_renderer->Render();
+        // Clear the D3D back buffer with a dark background
+        m_renderer->ClearColor(0.05f, 0.07f, 0.12f, 1.0f);
+        m_renderer->Render(); // Present
+
+        // Overlay GDI status text on top of the D3D output
+        m_window->DrawStatusOverlay();
     }
 }
 
