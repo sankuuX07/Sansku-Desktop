@@ -76,7 +76,22 @@ struct ConnectView: View {
                             .foregroundStyle(statusColor)
                     }
                 } header: {
-                    Text("Status")
+                    Text("Connection")
+                }
+
+                // ── Screen Capture ────────────────────────────────────────
+                Section {
+                    HStack {
+                        Spacer()
+                        BroadcastPickerView(preferredExtension: "com.sanskystream.ios.BroadcastExtension")
+                            .frame(width: 44, height: 44)
+                        Spacer()
+                    }
+                } header: {
+                    Text("Screen Capture")
+                } footer: {
+                    Text("Tap to start capturing the iPhone system screen.")
+                        .font(.caption)
                 }
             }
             .navigationTitle("SanskyStream")

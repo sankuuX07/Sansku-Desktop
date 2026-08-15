@@ -1,4 +1,4 @@
-# Build directories
+# Build files
 build/
 **/build/
 
@@ -10,21 +10,38 @@ build/
 CMakeFiles/
 CMakeCache.txt
 cmake_install.cmake
-Makefile
 
-# Compiled binaries
+# Compiled files
 *.exe
 *.dll
 *.obj
-*.o
 *.pdb
-*.ilk
 *.lib
-*.exp
+*.ilk
+
+# Generated videos
+*.mp4
+*.mov
+*.mkv
+*.avi
+*.webm
+
+# Generated audio
+*.wav
+*.mp3
+*.aac
+*.m4a
 
 # Logs
 *.log
 
-# Windows
+# Temporary/test files
+output/
+recordings/
+captures/
+test_output/
+
+# OS files
 Thumbs.db
 Desktop.ini
+.DS_Store
