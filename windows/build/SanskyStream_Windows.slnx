@@ -9,6 +9,8 @@
 	</Configurations>
 	<Project Path="ALL_BUILD.vcxproj" Type="8bc9ceb8-8b4a-11d0-8d11-00a0c91bc942" Id="83ca85e7-771a-3c2b-a20e-ad08cf4fccfe" DefaultStartup="true">
 		<BuildDependency Project="SanskyStream_Windows.vcxproj"/>
+		<BuildDependency Project="TestReceiver.vcxproj"/>
+		<BuildDependency Project="TestVideoSender.vcxproj"/>
 		<BuildDependency Project="ZERO_CHECK.vcxproj"/>
 		<Build Solution="Debug|*" Project="false"/>
 		<Build Solution="Release|*" Project="false"/>
@@ -16,6 +18,12 @@
 		<Build Solution="RelWithDebInfo|*" Project="false"/>
 	</Project>
 	<Project Path="SanskyStream_Windows.vcxproj" Type="8bc9ceb8-8b4a-11d0-8d11-00a0c91bc942" Id="823b312b-010d-352b-a377-dc40adc89d9a">
+		<BuildDependency Project="ZERO_CHECK.vcxproj"/>
+	</Project>
+	<Project Path="TestReceiver.vcxproj" Type="8bc9ceb8-8b4a-11d0-8d11-00a0c91bc942" Id="cec47474-8cd8-3239-9e8f-a476ed1361e6">
+		<BuildDependency Project="ZERO_CHECK.vcxproj"/>
+	</Project>
+	<Project Path="TestVideoSender.vcxproj" Type="8bc9ceb8-8b4a-11d0-8d11-00a0c91bc942" Id="7edbe1c0-bace-375c-888f-a15de83a5ee6">
 		<BuildDependency Project="ZERO_CHECK.vcxproj"/>
 	</Project>
 	<Project Path="ZERO_CHECK.vcxproj" Type="8bc9ceb8-8b4a-11d0-8d11-00a0c91bc942" Id="3eab3501-6d51-34eb-af58-587734b2b11d"/>

@@ -3,57 +3,102 @@ import CoreMedia
 
 /// The Broadcast Upload Extension sample handler.
 /// This class receives sample buffers from the system screen capture (ReplayKit).
+///
+/// M6 additions:
+///   - VideoTransport instance sends encoded frames over UDP to Windows.
+///   - VideoEncoder.onEncodedFrame is wired to VideoTransport.sendFrame().
+///
+/// Windows IP configuration:
+///   WINDOWS_HOST below must be set to the LAN IP of the Windows PC
+///   running SanskyStream (e.g. "192.168.1.100").
+///   This will be replaced by a dynamic discovery mechanism in a future milestone.
 class SampleHandler: RPBroadcastSampleHandler {
-    
-    private let videoEncoder = VideoEncoder()
 
-    override func broadcastStarted(withSetupInfo setupInfo: [String : NSObject]?) {
-        // User has requested to start the broadcast. Setup resources here.
+    // -----------------------------------------------------------------------
+    // Configuration
+    // -----------------------------------------------------------------------
+
+    /// IP address of the Windows SanskyStream receiver on the local network.
+    /// Update this to match your Windows PC's LAN IP before compiling.
+    private static let WINDOWS_HOST = "192.168.1.100"
+
+    // -----------------------------------------------------------------------
+    // Components
+    // -----------------------------------------------------------------------
+
+    private let videoEncoder                  = VideoEncoder()
+    private var videoTransport: VideoTransport?
+
+    // -----------------------------------------------------------------------
+    // Broadcast lifecycle
+    // -----------------------------------------------------------------------
+
+    override func broadcastStarted(withSetupInfo setupInfo: [String: NSObject]?) {
         print("SanskyStream Broadcast Started")
+
+        // Create the UDP transport to the Windows receiver.
+        videoTransport = VideoTransport(windowsHost: SampleHandler.WINDOWS_HOST)
+        if videoTransport == nil {
+            print("SanskyStream SampleHandler: VideoTransport failed to initialize. Video will not be sent.")
+        }
+
+        // Wire the encoder output to the transport input.
+        videoEncoder.onEncodedFrame = { [weak self] (naluData, presentationUs, isKeyframe) in
+            self?.videoTransport?.sendFrame(naluData: naluData,
+                                            presentationUs: presentationUs,
+                                            isKeyframe: isKeyframe)
+        }
     }
-    
+
     override func broadcastPaused() {
         // User has requested to pause the broadcast.
         print("SanskyStream Broadcast Paused")
     }
-    
+
     override func broadcastResumed() {
         // User has requested to resume the broadcast.
         print("SanskyStream Broadcast Resumed")
     }
-    
+
     override func broadcastFinished() {
         // User has requested to finish the broadcast.
         print("SanskyStream Broadcast Finished")
         videoEncoder.invalidate()
+        // VideoTransport socket is closed by its deinit.
+        videoTransport = nil
     }
-    
-    override func processSampleBuffer(_ sampleBuffer: CMSampleBuffer, with sampleBufferType: RPSampleBufferType) {
+
+    // -----------------------------------------------------------------------
+    // Sample buffer processing
+    // -----------------------------------------------------------------------
+
+    override func processSampleBuffer(_ sampleBuffer: CMSampleBuffer,
+                                      with sampleBufferType: RPSampleBufferType) {
         switch sampleBufferType {
         case .video:
-            // Handle video sample buffer
             handleVideoSampleBuffer(sampleBuffer)
-            
+
         case .audioApp:
-            // Handle audio sample buffer for app audio
-            // Audio is out of scope for Milestone 4.
+            // Audio is out of scope for Milestone 6.
             break
-            
+
         case .audioMic:
-            // Handle audio sample buffer for mic audio
-            // Audio is out of scope for Milestone 4.
+            // Audio is out of scope for Milestone 6.
             break
-            
+
         @unknown default:
-            // Handle other sample buffer types
             break
         }
     }
-    
-    // MARK: - Video Handling
-    
+
+    // -----------------------------------------------------------------------
+    // Video handling
+    // -----------------------------------------------------------------------
+
     private func handleVideoSampleBuffer(_ sampleBuffer: CMSampleBuffer) {
-        // Encode the video sample buffer using our H.264 VideoEncoder
+        // Encode the video sample buffer using our H.264 VideoEncoder.
+        // On completion, VideoEncoder calls onEncodedFrame, which calls
+        // VideoTransport.sendFrame() to fragment and transmit over UDP.
         videoEncoder.encode(sampleBuffer)
     }
 }

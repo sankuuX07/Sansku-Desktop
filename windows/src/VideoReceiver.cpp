@@ -1,22 +1,30 @@
 #include "VideoReceiver.h"
-#include "Protocol.h"
 #include "Logger.h"
 
 namespace SanskyStream {
 
-VideoReceiver::VideoReceiver(std::shared_ptr<Decoder> decoder) : m_decoder(decoder) {
-}
+// ---------------------------------------------------------------------------
+// M6: Log the complete reassembled frame.
+//
+// This is the hand-off point between the transport layer (M6) and the
+// decoder (M7).  In M7, OnCompleteFrame will pass the frame data to the
+// Media Foundation H.264 decoder MFT.
+// ---------------------------------------------------------------------------
 
-void VideoReceiver::OnVideoPacketReceived(const std::vector<uint8_t>& payload) {
-    if (payload.size() < sizeof(Protocol::VideoPayloadHeader)) return;
+void VideoReceiver::OnCompleteFrame(CompleteFrame frame)
+{
+    const char* kfStr = frame.isKeyframe ? "YES" : "NO";
 
-    const Protocol::VideoPayloadHeader* header = reinterpret_cast<const Protocol::VideoPayloadHeader*>(payload.data());
-    
-    std::vector<uint8_t> naluData(payload.begin() + sizeof(Protocol::VideoPayloadHeader), payload.end());
-    
-    if (m_decoder) {
-        m_decoder->DecodeVideoPacket(naluData, header->timestamp);
-    }
+    LOG_INFO("CompleteFrame received"
+             " | ID: "       + std::to_string(frame.frameId) +
+             " | Size: "     + std::to_string(frame.data.size()) + " bytes" +
+             " | Keyframe: " + kfStr +
+             " | PTS: "      + std::to_string(frame.presentationUs) + " \xc2\xb5s");
+
+    // TODO (M7): pass frame.data to the H.264 decoder MFT.
+    // The decoder will require frame.isKeyframe and frame.presentationUs
+    // for correct initialization and timestamp propagation.
+    (void)frame; // suppress unused-variable warning until M7
 }
 
 } // namespace SanskyStream
