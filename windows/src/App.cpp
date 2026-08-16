@@ -28,7 +28,7 @@ App::App() : m_isRunning(true) {
     }
 
     // -----------------------------------------------------------------------
-    // VideoReceiver — logs complete H.264 frames; decoder wired in M7.
+    // VideoReceiver — owns H264Decoder (M7); frames passed to Renderer in M8.
     // -----------------------------------------------------------------------
     m_videoReceiver = std::make_unique<VideoReceiver>();
 

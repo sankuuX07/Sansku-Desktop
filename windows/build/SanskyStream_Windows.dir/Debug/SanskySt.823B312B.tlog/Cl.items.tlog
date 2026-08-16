@@ -5,6 +5,7 @@ C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\src\Network.cpp;C:\Users\sa
 C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\src\VideoReceiver.cpp;C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\build\SanskyStream_Windows.dir\Debug\VideoReceiver.obj
 C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\src\VideoUdpReceiver.cpp;C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\build\SanskyStream_Windows.dir\Debug\VideoUdpReceiver.obj
 C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\src\FrameAssembler.cpp;C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\build\SanskyStream_Windows.dir\Debug\FrameAssembler.obj
+C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\src\H264Decoder.cpp;C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\build\SanskyStream_Windows.dir\Debug\H264Decoder.obj
 C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\src\AudioReceiver.cpp;C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\build\SanskyStream_Windows.dir\Debug\AudioReceiver.obj
 C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\src\Decoder.cpp;C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\build\SanskyStream_Windows.dir\Debug\Decoder.obj
 C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\src\Renderer.cpp;C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\build\SanskyStream_Windows.dir\Debug\Renderer.obj

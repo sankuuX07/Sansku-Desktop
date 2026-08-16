@@ -178,6 +178,10 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
       <Project>{823B312B-010D-352B-A377-DC40ADC89D9A}</Project>
       <Name>SanskyStream_Windows</Name>
     </ProjectReference>
+    <ProjectReference Include="C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\build\TestDecoder.vcxproj">
+      <Project>{A6FC49F6-FB3A-34C6-96C1-AE442D221D28}</Project>
+      <Name>TestDecoder</Name>
+    </ProjectReference>
     <ProjectReference Include="C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\build\TestReceiver.vcxproj">
       <Project>{CEC47474-8CD8-3239-9E8F-A476ED1361E6}</Project>
       <Name>TestReceiver</Name>

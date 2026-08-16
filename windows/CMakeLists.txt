@@ -16,6 +16,7 @@ set(SOURCES
     src/VideoReceiver.cpp
     src/VideoUdpReceiver.cpp
     src/FrameAssembler.cpp
+    src/H264Decoder.cpp
     src/AudioReceiver.cpp
     src/Decoder.cpp
     src/Renderer.cpp
@@ -101,5 +102,40 @@ target_link_libraries(TestReceiver PRIVATE ws2_32)
 if(MSVC)
     target_compile_options(TestReceiver PRIVATE /W4 /WX /EHsc)
     target_compile_definitions(TestReceiver PRIVATE
+        UNICODE _UNICODE WIN32_LEAN_AND_MEAN NOMINMAX)
+endif()
+
+# ---------------------------------------------------------------------------
+# TestDecoder — headless console harness for M7 H.264 decoder pipeline.
+# Links: H264Decoder, VideoReceiver, FrameAssembler, Logger.
+# Does NOT link: Window, Renderer, Network, AudioReceiver, VideoUdpReceiver.
+#
+# Usage:
+#   cmake --build . --target TestDecoder
+#   .\TestDecoder.exe
+# ---------------------------------------------------------------------------
+add_executable(TestDecoder
+    src/TestDecoder.cpp
+    src/H264Decoder.cpp
+    src/VideoReceiver.cpp
+    src/FrameAssembler.cpp
+    src/Logger.cpp
+)
+
+target_include_directories(TestDecoder PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/../protocol
+)
+
+target_link_libraries(TestDecoder PRIVATE
+    mf
+    mfplat
+    mfuuid
+    ws2_32
+)
+
+if(MSVC)
+    target_compile_options(TestDecoder PRIVATE /W4 /WX /EHsc)
+    target_compile_definitions(TestDecoder PRIVATE
         UNICODE _UNICODE WIN32_LEAN_AND_MEAN NOMINMAX)
 endif()

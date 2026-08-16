@@ -1,5 +1,6 @@
 C:/Users/sansk/OneDrive/Desktop/SanskyStream/windows/build/CMakeFiles/SanskyStream_Windows.dir
 C:/Users/sansk/OneDrive/Desktop/SanskyStream/windows/build/CMakeFiles/TestVideoSender.dir
 C:/Users/sansk/OneDrive/Desktop/SanskyStream/windows/build/CMakeFiles/TestReceiver.dir
+C:/Users/sansk/OneDrive/Desktop/SanskyStream/windows/build/CMakeFiles/TestDecoder.dir
 C:/Users/sansk/OneDrive/Desktop/SanskyStream/windows/build/CMakeFiles/ALL_BUILD.dir
 C:/Users/sansk/OneDrive/Desktop/SanskyStream/windows/build/CMakeFiles/ZERO_CHECK.dir

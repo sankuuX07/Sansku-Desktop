@@ -22,6 +22,9 @@
     <ClCompile Include="C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\src\FrameAssembler.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\src\H264Decoder.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\src\AudioReceiver.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
