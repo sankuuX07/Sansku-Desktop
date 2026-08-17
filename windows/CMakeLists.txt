@@ -15,6 +15,7 @@ set(SOURCES
     src/Network.cpp
     src/VideoReceiver.cpp
     src/VideoUdpReceiver.cpp
+    src/VideoFrameQueue.cpp      # M8: added (was missing from production target)
     src/FrameAssembler.cpp
     src/H264Decoder.cpp
     src/AudioReceiver.cpp
@@ -53,13 +54,8 @@ if(MSVC)
 endif()
 
 # ---------------------------------------------------------------------------
-# TestVideoSender — standalone loopback test tool (not part of production).
-# Sends fake H.264-like UDP datagrams to 127.0.0.1:5001 using the M6
-# protocol format.  Compile and run separately to validate VideoUdpReceiver.
-#
-# Usage:
-#   cmake --build . --target TestVideoSender
-#   .\TestVideoSender.exe [host] [port]   (defaults: 127.0.0.1  5001)
+# TestVideoSender — standalone loopback test tool (M6 transport layer).
+# Sends fake H.264-like UDP datagrams to 127.0.0.1:5001.
 # ---------------------------------------------------------------------------
 add_executable(TestVideoSender
     src/TestVideoSender.cpp
@@ -80,15 +76,19 @@ if(MSVC)
 endif()
 
 # ---------------------------------------------------------------------------
-# TestReceiver — headless console harness for end-to-end M6 pipeline testing.
-# Links only the transport stack (no Window/Renderer/Decoder/Audio).
-# Run TestReceiver.exe first, then TestVideoSender.exe in a second terminal.
+# TestReceiver — headless console harness for M6 pipeline testing.
+# Run first, then TestVideoSender in a second terminal.
+#
+# M8 fix: added H264Decoder.cpp, VideoFrameQueue.cpp, and MF libs because
+# VideoReceiver (M7) now owns an H264Decoder and (M8) uses VideoFrameQueue.
 # ---------------------------------------------------------------------------
 add_executable(TestReceiver
     src/TestReceiver.cpp
     src/VideoUdpReceiver.cpp
     src/FrameAssembler.cpp
     src/VideoReceiver.cpp
+    src/VideoFrameQueue.cpp      # M8: VideoReceiver depends on VideoFrameQueue
+    src/H264Decoder.cpp          # M8: VideoReceiver depends on H264Decoder (M7)
     src/Logger.cpp
 )
 
@@ -97,7 +97,12 @@ target_include_directories(TestReceiver PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../protocol
 )
 
-target_link_libraries(TestReceiver PRIVATE ws2_32)
+target_link_libraries(TestReceiver PRIVATE
+    mf                           # M8: required by H264Decoder
+    mfplat
+    mfuuid
+    ws2_32
+)
 
 if(MSVC)
     target_compile_options(TestReceiver PRIVATE /W4 /WX /EHsc)
@@ -107,17 +112,16 @@ endif()
 
 # ---------------------------------------------------------------------------
 # TestDecoder — headless console harness for M7 H.264 decoder pipeline.
-# Links: H264Decoder, VideoReceiver, FrameAssembler, Logger.
-# Does NOT link: Window, Renderer, Network, AudioReceiver, VideoUdpReceiver.
 #
-# Usage:
-#   cmake --build . --target TestDecoder
-#   .\TestDecoder.exe
+# M8 fix: added VideoFrameQueue.cpp because VideoReceiver::OnDecodedFrame
+# now references VideoFrameQueue::Push() (even when the pointer is null,
+# the linker still needs the symbol resolved).
 # ---------------------------------------------------------------------------
 add_executable(TestDecoder
     src/TestDecoder.cpp
     src/H264Decoder.cpp
     src/VideoReceiver.cpp
+    src/VideoFrameQueue.cpp      # M8: VideoReceiver depends on VideoFrameQueue
     src/FrameAssembler.cpp
     src/Logger.cpp
 )
@@ -137,5 +141,42 @@ target_link_libraries(TestDecoder PRIVATE
 if(MSVC)
     target_compile_options(TestDecoder PRIVATE /W4 /WX /EHsc)
     target_compile_definitions(TestDecoder PRIVATE
+        UNICODE _UNICODE WIN32_LEAN_AND_MEAN NOMINMAX)
+endif()
+
+# ---------------------------------------------------------------------------
+# TestRenderPipeline — M8 render-pipeline test.
+#
+# Creates a real Window + D3D11 Renderer, pushes synthetic 320x240 NV12
+# frames from a background thread at ~60 fps for 5 seconds, and confirms
+# HasVideo() + FPS > 0.  No iPhone, no H.264 encoder needed.
+#
+# Usage:
+#   cmake --build . --target TestRenderPipeline
+#   .\TestRenderPipeline.exe
+# ---------------------------------------------------------------------------
+add_executable(TestRenderPipeline
+    src/TestRenderPipeline.cpp
+    src/Window.cpp
+    src/Renderer.cpp
+    src/VideoFrameQueue.cpp
+    src/Logger.cpp
+)
+
+target_include_directories(TestRenderPipeline PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/../protocol
+)
+
+target_link_libraries(TestRenderPipeline PRIVATE
+    user32
+    gdi32
+    d3d11
+    d3dcompiler
+)
+
+if(MSVC)
+    target_compile_options(TestRenderPipeline PRIVATE /W4 /WX /EHsc)
+    target_compile_definitions(TestRenderPipeline PRIVATE
         UNICODE _UNICODE WIN32_LEAN_AND_MEAN NOMINMAX)
 endif()

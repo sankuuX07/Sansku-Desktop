@@ -18,7 +18,7 @@ App::App() : m_isRunning(true) {
     }
 
     // -----------------------------------------------------------------------
-    // Renderer (D3D11 swap chain)
+    // Renderer (D3D11 swap chain + NV12 shaders — M8)
     // -----------------------------------------------------------------------
     m_renderer = std::make_unique<Renderer>(m_window.get());
     if (!m_renderer->Initialize()) {
@@ -28,9 +28,20 @@ App::App() : m_isRunning(true) {
     }
 
     // -----------------------------------------------------------------------
-    // VideoReceiver — owns H264Decoder (M7); frames passed to Renderer in M8.
+    // VideoFrameQueue — single-slot latest-frame store shared between
+    // VideoReceiver (receive thread producer) and Renderer (main thread consumer).
+    // Constructed before VideoReceiver so it is ready before any frame arrives.
+    // -----------------------------------------------------------------------
+    m_frameQueue = std::make_unique<VideoFrameQueue>();
+
+    // -----------------------------------------------------------------------
+    // VideoReceiver — owns H264Decoder (M7); decoded frames go to the queue.
     // -----------------------------------------------------------------------
     m_videoReceiver = std::make_unique<VideoReceiver>();
+    m_videoReceiver->SetFrameQueue(m_frameQueue.get());
+
+    // Give the renderer the same queue so it can TryPop on every frame.
+    m_renderer->SetFrameQueue(m_frameQueue.get());
 
     // -----------------------------------------------------------------------
     // VideoUdpReceiver — binds UDP port 5001, feeds FrameAssembler,
@@ -47,7 +58,6 @@ App::App() : m_isRunning(true) {
 
     // -----------------------------------------------------------------------
     // Network — TCP server on port 5000 (control / HELLO channel).
-    // This connection is unchanged from M1–M3.
     // -----------------------------------------------------------------------
     m_network = std::make_unique<Network>();
     m_network->SetStatusCallback([this](const std::string& status) {
@@ -55,15 +65,15 @@ App::App() : m_isRunning(true) {
     });
 
     m_window->SetStatusText(
-        "SanskyStream Client\r\n\r\nStatus: Initializing..."
-        "\r\nControl: TCP :" + std::to_string(Protocol::CONTROL_TCP_PORT) +
+        "SanskyStream\r\n\r\nWaiting for video...\r\n"
+        "Control: TCP :" + std::to_string(Protocol::CONTROL_TCP_PORT) +
         "\r\nVideo:   UDP :" + std::to_string(Protocol::VIDEO_UDP_PORT));
 
     if (!m_network->StartServer(Protocol::CONTROL_TCP_PORT)) {
         LOG_WARN("Network server failed to start. Running without networking.");
         m_window->SetStatusText(
-            "SanskyStream Client\r\n\r\nStatus: Network Error"
-            "\r\nControl: TCP :" + std::to_string(Protocol::CONTROL_TCP_PORT) +
+            "SanskyStream\r\n\r\nNetwork Error\r\n"
+            "Control: TCP :" + std::to_string(Protocol::CONTROL_TCP_PORT) +
             "\r\nVideo:   UDP :" + std::to_string(Protocol::VIDEO_UDP_PORT));
     }
 }
@@ -82,7 +92,7 @@ App::~App() {
 void App::OnNetworkStatus(const std::string& status) {
     if (m_window) {
         m_window->SetStatusText(
-            "SanskyStream Client\r\n\r\nStatus: " + status +
+            "SanskyStream\r\n\r\nStatus: " + status +
             "\r\nControl: TCP :" + std::to_string(Protocol::CONTROL_TCP_PORT) +
             "\r\nVideo:   UDP :" + std::to_string(Protocol::VIDEO_UDP_PORT));
     }
@@ -99,8 +109,15 @@ void App::Run() {
             break;
         }
 
-        m_renderer->ClearColor(0.05f, 0.07f, 0.12f, 1.0f);
+        // Renderer::Render() internally:
+        //   - handles pending window resize (TakeResizePending)
+        //   - clears the back buffer
+        //   - pops the latest decoded frame from the queue (if any)
+        //   - uploads NV12 to GPU and draws the letterbox video quad
+        //   - updates the FPS status overlay text
+        //   - calls Present(0,0) and sleeps 1 ms when idle
         m_renderer->Render();
+
         m_window->DrawStatusOverlay();
     }
 }

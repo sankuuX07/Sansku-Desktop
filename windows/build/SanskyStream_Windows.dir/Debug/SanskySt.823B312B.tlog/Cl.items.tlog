@@ -3,6 +3,7 @@ C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\src\App.cpp;C:\Users\sansk\
 C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\src\Window.cpp;C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\build\SanskyStream_Windows.dir\Debug\Window.obj
 C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\src\Network.cpp;C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\build\SanskyStream_Windows.dir\Debug\Network.obj
 C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\src\VideoReceiver.cpp;C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\build\SanskyStream_Windows.dir\Debug\VideoReceiver.obj
+C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\src\VideoFrameQueue.cpp;C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\build\SanskyStream_Windows.dir\Debug\VideoFrameQueue.obj
 C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\src\VideoUdpReceiver.cpp;C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\build\SanskyStream_Windows.dir\Debug\VideoUdpReceiver.obj
 C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\src\FrameAssembler.cpp;C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\build\SanskyStream_Windows.dir\Debug\FrameAssembler.obj
 C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\src\H264Decoder.cpp;C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\build\SanskyStream_Windows.dir\Debug\H264Decoder.obj

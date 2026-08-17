@@ -186,6 +186,10 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
       <Project>{CEC47474-8CD8-3239-9E8F-A476ED1361E6}</Project>
       <Name>TestReceiver</Name>
     </ProjectReference>
+    <ProjectReference Include="C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\build\TestRenderPipeline.vcxproj">
+      <Project>{801471FF-5618-39EC-AA96-3869303C017F}</Project>
+      <Name>TestRenderPipeline</Name>
+    </ProjectReference>
     <ProjectReference Include="C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\build\TestVideoSender.vcxproj">
       <Project>{7EDBE1C0-BACE-375C-888F-A15DE83A5EE6}</Project>
       <Name>TestVideoSender</Name>

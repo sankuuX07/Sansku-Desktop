@@ -1,0 +1,7 @@
+C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\src\TestReceiver.cpp;C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\build\TestReceiver.dir\Release\TestReceiver.obj
+C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\src\VideoUdpReceiver.cpp;C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\build\TestReceiver.dir\Release\VideoUdpReceiver.obj
+C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\src\FrameAssembler.cpp;C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\build\TestReceiver.dir\Release\FrameAssembler.obj
+C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\src\VideoReceiver.cpp;C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\build\TestReceiver.dir\Release\VideoReceiver.obj
+C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\src\VideoFrameQueue.cpp;C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\build\TestReceiver.dir\Release\VideoFrameQueue.obj
+C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\src\H264Decoder.cpp;C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\build\TestReceiver.dir\Release\H264Decoder.obj
+C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\src\Logger.cpp;C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\build\TestReceiver.dir\Release\Logger.obj

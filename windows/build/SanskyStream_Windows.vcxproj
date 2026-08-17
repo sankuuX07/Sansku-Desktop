@@ -378,6 +378,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ClCompile Include="C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\src\Network.cpp" />
     <ClCompile Include="C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\src\VideoReceiver.cpp" />
     <ClCompile Include="C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\src\VideoUdpReceiver.cpp" />
+    <ClCompile Include="C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\src\VideoFrameQueue.cpp" />
     <ClCompile Include="C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\src\FrameAssembler.cpp" />
     <ClCompile Include="C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\src\H264Decoder.cpp" />
     <ClCompile Include="C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\src\AudioReceiver.cpp" />

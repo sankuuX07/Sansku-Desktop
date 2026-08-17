@@ -11,6 +11,7 @@
 		<BuildDependency Project="SanskyStream_Windows.vcxproj"/>
 		<BuildDependency Project="TestDecoder.vcxproj"/>
 		<BuildDependency Project="TestReceiver.vcxproj"/>
+		<BuildDependency Project="TestRenderPipeline.vcxproj"/>
 		<BuildDependency Project="TestVideoSender.vcxproj"/>
 		<BuildDependency Project="ZERO_CHECK.vcxproj"/>
 		<Build Solution="Debug|*" Project="false"/>
@@ -25,6 +26,9 @@
 		<BuildDependency Project="ZERO_CHECK.vcxproj"/>
 	</Project>
 	<Project Path="TestReceiver.vcxproj" Type="8bc9ceb8-8b4a-11d0-8d11-00a0c91bc942" Id="cec47474-8cd8-3239-9e8f-a476ed1361e6">
+		<BuildDependency Project="ZERO_CHECK.vcxproj"/>
+	</Project>
+	<Project Path="TestRenderPipeline.vcxproj" Type="8bc9ceb8-8b4a-11d0-8d11-00a0c91bc942" Id="801471ff-5618-39ec-aa96-3869303c017f">
 		<BuildDependency Project="ZERO_CHECK.vcxproj"/>
 	</Project>
 	<Project Path="TestVideoSender.vcxproj" Type="8bc9ceb8-8b4a-11d0-8d11-00a0c91bc942" Id="7edbe1c0-bace-375c-888f-a15de83a5ee6">

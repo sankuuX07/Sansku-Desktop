@@ -1,0 +1,10 @@
+^C:\USERS\SANSK\ONEDRIVE\DESKTOP\SANSKYSTREAM\WINDOWS\BUILD\CMAKEFILES\E6A808C92DB052066778055F5694F906\GENERATE.STAMP.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SC:/Users/sansk/OneDrive/Desktop/SanskyStream/windows -BC:/Users/sansk/OneDrive/Desktop/SanskyStream/windows/build --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file C:/Users/sansk/OneDrive/Desktop/SanskyStream/windows/build/SanskyStream_Windows.slnx
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

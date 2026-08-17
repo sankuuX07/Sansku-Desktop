@@ -19,6 +19,9 @@
     <ClCompile Include="C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\src\VideoUdpReceiver.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\src\VideoFrameQueue.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\src\FrameAssembler.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

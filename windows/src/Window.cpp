@@ -15,22 +15,15 @@ Window::Window(int width, int height, const std::wstring& title)
     wc.cbSize        = sizeof(wc);
     wc.style         = CS_OWNDC;
     wc.lpfnWndProc   = WindowProc;
-    wc.cbClsExtra    = 0;
-    wc.cbWndExtra    = 0;
     wc.hInstance     = m_hInstance;
-    wc.hIcon         = nullptr;
     wc.hCursor       = LoadCursor(nullptr, IDC_ARROW);
-    wc.hbrBackground = nullptr;
-    wc.lpszMenuName  = nullptr;
     wc.lpszClassName = m_windowClass.c_str();
-    wc.hIconSm       = nullptr;
 
     if (!RegisterClassExW(&wc)) {
         LOG_ERROR("Failed to register window class.");
         return;
     }
 
-    // Adjust window rect so the *client* area matches the requested dimensions
     RECT wr = { 0, 0, m_width, m_height };
     AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, FALSE);
 
@@ -42,11 +35,9 @@ Window::Window(int width, int height, const std::wstring& title)
         CW_USEDEFAULT, CW_USEDEFAULT,
         wr.right  - wr.left,
         wr.bottom - wr.top,
-        nullptr,
-        nullptr,
+        nullptr, nullptr,
         m_hInstance,
-        this    // Passed to WindowProc via WM_CREATE so we can store the pointer
-    );
+        this);
 
     if (!m_hwnd) {
         LOG_ERROR("Failed to create window.");
@@ -79,6 +70,21 @@ bool Window::ProcessMessages() {
 }
 
 // ---------------------------------------------------------------------------
+// Resize pending — set by WM_SIZE on main thread, consumed by Render thread.
+// Both sides run on the main thread so no mutex is needed.
+// ---------------------------------------------------------------------------
+
+bool Window::TakeResizePending(int& newW, int& newH) {
+    if (!m_resizePending) return false;
+    m_width          = m_pendingWidth;
+    m_height         = m_pendingHeight;
+    newW             = m_pendingWidth;
+    newH             = m_pendingHeight;
+    m_resizePending  = false;
+    return true;
+}
+
+// ---------------------------------------------------------------------------
 // Status text — thread-safe (called from the network thread)
 // ---------------------------------------------------------------------------
 
@@ -99,20 +105,16 @@ std::string Window::GetStatusText() const {
 void Window::DrawStatusOverlay() {
     if (!m_hwnd) return;
 
-    // Snapshot the status string under lock, then release before GDI calls
     std::wstring wStatus;
     {
         std::lock_guard<std::mutex> lock(m_statusMutex);
-        // Status text is pure ASCII — widen character-by-character
         wStatus.assign(m_statusText.begin(), m_statusText.end());
     }
-
     if (wStatus.empty()) return;
 
     HDC hdc = GetDC(m_hwnd);
     if (!hdc) return;
 
-    // ----- Dark background panel so text is readable over any D3D color -----
     HBRUSH bgBrush = CreateSolidBrush(RGB(8, 12, 24));
     if (bgBrush) {
         RECT bgRect = { 15L, 15L, 430L, 135L };
@@ -120,33 +122,19 @@ void Window::DrawStatusOverlay() {
         DeleteObject(bgBrush);
     }
 
-    // ----- Text rendering -----
     SetBkMode(hdc, TRANSPARENT);
     SetTextColor(hdc, RGB(210, 215, 230));
 
-    // Segoe UI gives a clean, modern look
     HFONT hFont = CreateFontW(
-        22,                         // Height (logical units)
-        0,                          // Width  (0 = auto)
-        0, 0,                       // Escapement, Orientation
-        FW_NORMAL,                  // Weight
-        FALSE, FALSE, FALSE,        // Italic, Underline, StrikeOut
-        DEFAULT_CHARSET,
-        OUT_DEFAULT_PRECIS,
-        CLIP_DEFAULT_PRECIS,
-        CLEARTYPE_QUALITY,
-        DEFAULT_PITCH | FF_DONTCARE,
-        L"Segoe UI"
-    );
+        22, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+        DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+        CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, L"Segoe UI");
 
     if (hFont) {
         HGDIOBJ hOldFont = SelectObject(hdc, hFont);
-
         RECT textRect = { 25L, 22L, 420L, 128L };
-        // DT_EDITCONTROL makes DrawTextW honour \r\n line breaks
         DrawTextW(hdc, wStatus.c_str(), -1, &textRect,
                   DT_LEFT | DT_TOP | DT_WORDBREAK | DT_EDITCONTROL);
-
         SelectObject(hdc, hOldFont);
         DeleteObject(hFont);
     }
@@ -158,7 +146,8 @@ void Window::DrawStatusOverlay() {
 // Window procedure
 // ---------------------------------------------------------------------------
 
-LRESULT CALLBACK Window::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+LRESULT CALLBACK Window::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
     if (uMsg == WM_CREATE) {
         CREATESTRUCT* pCreate = reinterpret_cast<CREATESTRUCT*>(lParam);
         Window* pState = reinterpret_cast<Window*>(pCreate->lpCreateParams);
@@ -171,12 +160,23 @@ LRESULT CALLBACK Window::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM 
                 case WM_DESTROY:
                     PostQuitMessage(0);
                     return 0;
-                // Additional message handling (resize, etc.) added in future milestones
+
+                case WM_SIZE:
+                    // Skip minimized (LOWORD/HIWORD both 0 when SIZE_MINIMIZED).
+                    if (wParam != SIZE_MINIMIZED) {
+                        pState->m_pendingWidth  = static_cast<int>(LOWORD(lParam));
+                        pState->m_pendingHeight = static_cast<int>(HIWORD(lParam));
+                        pState->m_resizePending = true;
+                    }
+                    return 0;
+
+                default:
+                    break;
             }
         }
     }
-
     return DefWindowProc(hwnd, uMsg, wParam, lParam);
 }
 
 } // namespace SanskyStream
+
