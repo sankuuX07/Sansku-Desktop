@@ -8,6 +8,10 @@ import CoreMedia
 ///   - VideoTransport instance sends encoded frames over UDP to Windows.
 ///   - VideoEncoder.onEncodedFrame is wired to VideoTransport.sendFrame().
 ///
+/// M9 additions:
+///   - AudioCapture instance processes .audioApp (game/system audio) buffers.
+///   - .audioMic buffers remain intentionally ignored (microphone not required).
+///
 /// Windows IP configuration:
 ///   WINDOWS_HOST below must be set to the LAN IP of the Windows PC
 ///   running SanskyStream (e.g. "192.168.1.100").
@@ -29,6 +33,10 @@ class SampleHandler: RPBroadcastSampleHandler {
     private let videoEncoder                  = VideoEncoder()
     private var videoTransport: VideoTransport?
 
+    // M9: Audio capture — app/system audio only (game audio, UI sounds).
+    // Microphone capture is NOT included per M9 scope.
+    private let audioCapture                   = AudioCapture()
+
     // -----------------------------------------------------------------------
     // Broadcast lifecycle
     // -----------------------------------------------------------------------
@@ -48,6 +56,18 @@ class SampleHandler: RPBroadcastSampleHandler {
                                             presentationUs: presentationUs,
                                             isKeyframe: isKeyframe)
         }
+
+        // M9: Wire AudioCapture callback.
+        // onAudioFrame is a no-op placeholder until M10 (audio encoding).
+        // The closure is intentionally empty: AudioCapture validates, buffers,
+        // and logs internally. M10 will replace this with encoder invocation.
+        audioCapture.onAudioFrame = { frame in
+            // M10 will encode frame.pcmData here.
+            // M9: audio data lives in memory only — no encoding, no transport.
+            _ = frame
+        }
+
+        print("SanskyStream SampleHandler: AudioCapture ready (app audio only, M9).")
     }
 
     override func broadcastPaused() {
@@ -66,6 +86,8 @@ class SampleHandler: RPBroadcastSampleHandler {
         videoEncoder.invalidate()
         // VideoTransport socket is closed by its deinit.
         videoTransport = nil
+        // M9: log final audio statistics.
+        audioCapture.logDiagnostics()
     }
 
     // -----------------------------------------------------------------------
@@ -79,11 +101,12 @@ class SampleHandler: RPBroadcastSampleHandler {
             handleVideoSampleBuffer(sampleBuffer)
 
         case .audioApp:
-            // Audio is out of scope for Milestone 6.
-            break
+            // M9: Route application/system (game) audio to AudioCapture.
+            handleAppAudioSampleBuffer(sampleBuffer)
 
         case .audioMic:
-            // Audio is out of scope for Milestone 6.
+            // Microphone audio is not required for SanskyStream (game/app audio focus).
+            // Intentionally ignored. Do not request microphone permission.
             break
 
         @unknown default:
@@ -100,5 +123,18 @@ class SampleHandler: RPBroadcastSampleHandler {
         // On completion, VideoEncoder calls onEncodedFrame, which calls
         // VideoTransport.sendFrame() to fragment and transmit over UDP.
         videoEncoder.encode(sampleBuffer)
+    }
+
+    // -----------------------------------------------------------------------
+    // M9: App audio handling
+    // -----------------------------------------------------------------------
+
+    /// Route a ReplayKit .audioApp sample buffer to AudioCapture.
+    ///
+    /// AudioCapture validates, extracts format metadata, preserves the PTS,
+    /// copies PCM bytes into an AudioFrame, and fires onAudioFrame.
+    /// No encoding or network transmission occurs in M9.
+    private func handleAppAudioSampleBuffer(_ sampleBuffer: CMSampleBuffer) {
+        audioCapture.processAppAudioBuffer(sampleBuffer)
     }
 }
