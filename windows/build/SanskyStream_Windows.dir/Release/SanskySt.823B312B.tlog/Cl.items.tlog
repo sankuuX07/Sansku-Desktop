@@ -8,6 +8,8 @@ C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\src\VideoFrameQueue.cpp;C:\
 C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\src\FrameAssembler.cpp;C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\build\SanskyStream_Windows.dir\Release\FrameAssembler.obj
 C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\src\H264Decoder.cpp;C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\build\SanskyStream_Windows.dir\Release\H264Decoder.obj
 C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\src\AudioReceiver.cpp;C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\build\SanskyStream_Windows.dir\Release\AudioReceiver.obj
+C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\src\AACDecoder.cpp;C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\build\SanskyStream_Windows.dir\Release\AACDecoder.obj
+C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\src\AudioPlayer.cpp;C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\build\SanskyStream_Windows.dir\Release\AudioPlayer.obj
 C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\src\Decoder.cpp;C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\build\SanskyStream_Windows.dir\Release\Decoder.obj
 C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\src\Renderer.cpp;C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\build\SanskyStream_Windows.dir\Release\Renderer.obj
 C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\src\Logger.cpp;C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\build\SanskyStream_Windows.dir\Release\Logger.obj

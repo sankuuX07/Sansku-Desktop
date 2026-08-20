@@ -40,10 +40,12 @@ struct VideoPayloadHeader {
     // Followed by raw H.264 NALUs in Annex B format
 };
 
-// Legacy audio payload header (kept for reference; audio not yet implemented).
+// Audio payload header — M10/M11.
+// Sent over TCP (port 5000) inside a PacketHeader with PacketType::Audio.
 struct AudioPayloadHeader {
-    uint64_t timestamp;  // Presentation timestamp (microseconds)
-    // Followed by raw AAC data
+    uint64_t timestamp;  // Presentation timestamp (microseconds, little-endian)
+    // Followed immediately by raw AAC-LC access unit bytes.
+    // The AAC frame contains NO ADTS header — raw access unit only.
 };
 
 #pragma pack(pop)
@@ -93,8 +95,27 @@ constexpr uint32_t VIDEO_MAX_PAYLOAD      = 1300;
 // UDP port for the video media channel.
 constexpr uint16_t VIDEO_UDP_PORT         = 5001;
 
-// TCP port for the control channel.
+// TCP port for the control channel (audio also travels here as PacketType::Audio).
 constexpr uint16_t CONTROL_TCP_PORT       = 5000;
+
+// ---------------------------------------------------------------------------
+// Audio constants — M10/M11
+//
+// The iOS encoder uses AVAudioFormatInt16 (Float32 resampled or direct 16-bit)
+// via AudioToolbox AAC-LC encoder. ReplayKit delivers 44100 Hz stereo on most
+// devices; 48000 Hz is also possible. We negotiate the actual rate from the
+// first decoded output type rather than hard-coding here.
+// These defaults are used by AudioReceiver when no explicit rate is specified.
+// ---------------------------------------------------------------------------
+
+// Default AAC-LC sample rate (ReplayKit app audio, most devices).
+constexpr uint32_t AUDIO_DEFAULT_SAMPLE_RATE  = 44100;
+
+// Default channel count (stereo app audio from ReplayKit).
+constexpr uint32_t AUDIO_DEFAULT_CHANNELS     = 2;
+
+// AAC-LC audio object type (ISO 14496-3).
+constexpr uint8_t  AUDIO_AAC_OBJECT_TYPE      = 2;
 
 // ---------------------------------------------------------------------------
 // Byte-offset constants for VideoFragmentHeader serialization.

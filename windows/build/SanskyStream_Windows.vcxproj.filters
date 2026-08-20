@@ -31,6 +31,12 @@
     <ClCompile Include="C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\src\AudioReceiver.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\src\AACDecoder.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\src\AudioPlayer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\src\Decoder.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

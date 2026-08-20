@@ -30,7 +30,6 @@ App::App() : m_isRunning(true) {
     // -----------------------------------------------------------------------
     // VideoFrameQueue — single-slot latest-frame store shared between
     // VideoReceiver (receive thread producer) and Renderer (main thread consumer).
-    // Constructed before VideoReceiver so it is ready before any frame arrives.
     // -----------------------------------------------------------------------
     m_frameQueue = std::make_unique<VideoFrameQueue>();
 
@@ -39,13 +38,10 @@ App::App() : m_isRunning(true) {
     // -----------------------------------------------------------------------
     m_videoReceiver = std::make_unique<VideoReceiver>();
     m_videoReceiver->SetFrameQueue(m_frameQueue.get());
-
-    // Give the renderer the same queue so it can TryPop on every frame.
     m_renderer->SetFrameQueue(m_frameQueue.get());
 
     // -----------------------------------------------------------------------
-    // VideoUdpReceiver — binds UDP port 5001, feeds FrameAssembler,
-    // delivers CompleteFrame objects to VideoReceiver.
+    // VideoUdpReceiver — binds UDP port 5001.
     // -----------------------------------------------------------------------
     m_videoUdpReceiver = std::make_unique<VideoUdpReceiver>(
         [this](CompleteFrame frame) {
@@ -57,28 +53,51 @@ App::App() : m_isRunning(true) {
     }
 
     // -----------------------------------------------------------------------
-    // Network — TCP server on port 5000 (control / HELLO channel).
+    // AudioReceiver — M11: AAC decoder + WASAPI playback.
+    // Start with default parameters; the actual format will be negotiated
+    // from the MFT output type on the first decoded packet.
+    // -----------------------------------------------------------------------
+    m_audioReceiver = std::make_unique<AudioReceiver>();
+    if (!m_audioReceiver->Start(Protocol::AUDIO_DEFAULT_SAMPLE_RATE,
+                                 Protocol::AUDIO_DEFAULT_CHANNELS)) {
+        LOG_WARN("AudioReceiver failed to start. Audio playback disabled.");
+        // Non-fatal: video pipeline continues.
+        m_audioReceiver.reset();
+    }
+
+    // -----------------------------------------------------------------------
+    // Network — TCP server on port 5000.
     // -----------------------------------------------------------------------
     m_network = std::make_unique<Network>();
     m_network->SetStatusCallback([this](const std::string& status) {
         OnNetworkStatus(status);
     });
 
+    // M11: wire audio packet dispatch.
+    m_network->SetAudioPacketCallback([this](const uint8_t* data, size_t size) {
+        OnAudioPacket(data, size);
+    });
+
     m_window->SetStatusText(
-        "SanskyStream\r\n\r\nWaiting for video...\r\n"
+        "SanskyStream\\r\\n\\r\\nWaiting for video...\\r\\n"
         "Control: TCP :" + std::to_string(Protocol::CONTROL_TCP_PORT) +
-        "\r\nVideo:   UDP :" + std::to_string(Protocol::VIDEO_UDP_PORT));
+        "\\r\\nVideo:   UDP :" + std::to_string(Protocol::VIDEO_UDP_PORT));
 
     if (!m_network->StartServer(Protocol::CONTROL_TCP_PORT)) {
         LOG_WARN("Network server failed to start. Running without networking.");
         m_window->SetStatusText(
-            "SanskyStream\r\n\r\nNetwork Error\r\n"
+            "SanskyStream\\r\\n\\r\\nNetwork Error\\r\\n"
             "Control: TCP :" + std::to_string(Protocol::CONTROL_TCP_PORT) +
-            "\r\nVideo:   UDP :" + std::to_string(Protocol::VIDEO_UDP_PORT));
+            "\\r\\nVideo:   UDP :" + std::to_string(Protocol::VIDEO_UDP_PORT));
     }
 }
 
 App::~App() {
+    // Stop audio first so the decode/playback threads shut down cleanly
+    // before the network thread is stopped.
+    if (m_audioReceiver) {
+        m_audioReceiver->Stop();
+    }
     if (m_videoUdpReceiver) {
         m_videoUdpReceiver->Stop();
     }
@@ -92,9 +111,16 @@ App::~App() {
 void App::OnNetworkStatus(const std::string& status) {
     if (m_window) {
         m_window->SetStatusText(
-            "SanskyStream\r\n\r\nStatus: " + status +
-            "\r\nControl: TCP :" + std::to_string(Protocol::CONTROL_TCP_PORT) +
-            "\r\nVideo:   UDP :" + std::to_string(Protocol::VIDEO_UDP_PORT));
+            "SanskyStream\\r\\n\\r\\nStatus: " + status +
+            "\\r\\nControl: TCP :" + std::to_string(Protocol::CONTROL_TCP_PORT) +
+            "\\r\\nVideo:   UDP :" + std::to_string(Protocol::VIDEO_UDP_PORT));
+    }
+}
+
+// Called from the network thread when an audio packet arrives.
+void App::OnAudioPacket(const uint8_t* payload, size_t size) {
+    if (m_audioReceiver) {
+        m_audioReceiver->OnAudioPacketReceived(payload, size);
     }
 }
 
@@ -109,15 +135,7 @@ void App::Run() {
             break;
         }
 
-        // Renderer::Render() internally:
-        //   - handles pending window resize (TakeResizePending)
-        //   - clears the back buffer
-        //   - pops the latest decoded frame from the queue (if any)
-        //   - uploads NV12 to GPU and draws the letterbox video quad
-        //   - updates the FPS status overlay text
-        //   - calls Present(0,0) and sleeps 1 ms when idle
         m_renderer->Render();
-
         m_window->DrawStatusOverlay();
     }
 }
