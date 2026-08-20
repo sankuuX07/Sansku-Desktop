@@ -98,64 +98,45 @@ bool AudioPlayer::Initialize(uint32_t sampleRate, uint32_t channelCount,
     m_audioClient = pAC;
 
     // ------------------------------------------------------------------
-    // Use WASAPI's own mix format. In shared mode, WASAPI already runs at
-    // the system's preferred mix format (e.g. 48 kHz 32-bit float).
-    // We request our preferred format first. If the device rejects it,
-    // fall back to the device's own mix format and let Windows mix.
+    // Determine the format to use for WASAPI initialization.
+    //
+    // Strategy: In shared mode WASAPI runs at the system's mix format
+    // (typically 48 kHz, 32-bit float, stored as WAVEFORMATEXTENSIBLE).
+    // Passing any other format — even a valid PCM one — to Initialize()
+    // will fail with E_INVALIDARG unless it exactly matches that mix format.
+    //
+    // The correct approach for shared mode:
+    //   1. Call GetMixFormat() to learn the device's authoritative format.
+    //   2. Initialize() with exactly that format — guaranteed to succeed.
+    //   3. Record the actual sample rate / channels / bit depth for use
+    //      in the ring buffer and playback thread.
+    //
+    // The AACDecoder outputs 16-bit PCM, so any format mismatch between
+    // the decoded PCM and the WASAPI mix format is a format mismatch that
+    // Windows will handle via its audio engine (software remix).
+    // We do NOT perform our own sample-rate conversion in M11.
     // ------------------------------------------------------------------
-    WAVEFORMATEX wfx = {};
-    wfx.wFormatTag      = WAVE_FORMAT_PCM;
-    wfx.nChannels       = static_cast<WORD>(channelCount);
-    wfx.nSamplesPerSec  = sampleRate;
-    wfx.wBitsPerSample  = static_cast<WORD>(bitsPerSample);
-    wfx.nBlockAlign     = static_cast<WORD>(m_blockAlign);
-    wfx.nAvgBytesPerSec = sampleRate * m_blockAlign;
-    wfx.cbSize          = 0;
-
-    // Ask WASAPI if it can use our format.
-    WAVEFORMATEX* pClosest = nullptr;
-    HRESULT hrFmt = pAC->IsFormatSupported(AUDCLNT_SHAREMODE_SHARED, &wfx, &pClosest);
-
-    // Pointer to the format we will actually use for Initialize.
-    WAVEFORMATEX* pUseFormat = &wfx;
-    bool usingMixFormat = false;
-
-    if (hrFmt == S_OK) {
-        // Exact match — use our requested format.
-        if (pClosest) { CoTaskMemFree(pClosest); pClosest = nullptr; }
-    } else {
-        // Our format is not directly supported (S_FALSE) or rejected (FAILED).
-        // Fall back to the device's native mix format.
-        if (pClosest) { CoTaskMemFree(pClosest); pClosest = nullptr; }
-
-        WAVEFORMATEX* pMix = nullptr;
-        if (SUCCEEDED(pAC->GetMixFormat(&pMix)) && pMix) {
-            LOG_WARN("AudioPlayer: Requested format not supported; using device mix format: " +
-                     std::to_string(pMix->nSamplesPerSec) + " Hz, " +
-                     std::to_string(pMix->nChannels) + " ch, " +
-                     std::to_string(pMix->wBitsPerSample) + "-bit.");
-            m_sampleRate    = pMix->nSamplesPerSec;
-            m_channelCount  = pMix->nChannels;
-            m_bitsPerSample = pMix->wBitsPerSample;
-            m_blockAlign    = pMix->nBlockAlign;
-            pUseFormat      = pMix;
-            usingMixFormat  = true;
-        } else {
-            LOG_ERROR("AudioPlayer: Cannot determine a usable audio format.");
-    // ------------------------------------------------------------------
-    WAVEFORMATEX* pMix = nullptr;
-    hr = pAC->GetMixFormat(&pMix);
-    if (FAILED(hr) || !pMix) {
-        LOG_ERROR("AudioPlayer: GetMixFormat failed. HRESULT=0x" + HrHex(hr));
+    WAVEFORMATEX* pMixFormat = nullptr;
+    hr = pAC->GetMixFormat(&pMixFormat);
+    if (FAILED(hr) || !pMixFormat) {
+        LOG_ERROR("AudioPlayer: GetMixFormat() failed. HRESULT=0x" + HrHex(hr));
         return false;
     }
-    
-    WAVEFORMATEX* pUseFormat = pMix;
-    m_sampleRate    = pUseFormat->nSamplesPerSec;
-    m_channelCount  = pUseFormat->nChannels;
-    m_bitsPerSample = pUseFormat->wBitsPerSample;
-    m_blockAlign    = pUseFormat->nBlockAlign;
-    bool usingMixFormat = true;
+
+    // Log the actual mix format for diagnostics.
+    LOG_INFO("AudioPlayer: Device mix format: " +
+             std::to_string(pMixFormat->nSamplesPerSec) + " Hz, " +
+             std::to_string(pMixFormat->nChannels) + " ch, " +
+             std::to_string(pMixFormat->wBitsPerSample) + "-bit. " +
+             "Requested: " + std::to_string(sampleRate) + " Hz, " +
+             std::to_string(channelCount) + " ch, " +
+             std::to_string(bitsPerSample) + "-bit.");
+
+    // Update our internal format to match WASAPI (for ring buffer sizing).
+    m_sampleRate    = pMixFormat->nSamplesPerSec;
+    m_channelCount  = pMixFormat->nChannels;
+    m_bitsPerSample = pMixFormat->wBitsPerSample;
+    m_blockAlign    = pMixFormat->nBlockAlign;
 
     // ------------------------------------------------------------------
     // Create the WASAPI buffer-ready event.
@@ -164,17 +145,19 @@ bool AudioPlayer::Initialize(uint32_t sampleRate, uint32_t channelCount,
     if (!hEvent) {
         LOG_ERROR("AudioPlayer: CreateEvent failed. Error=" +
                   std::to_string(GetLastError()));
-        if (usingMixFormat) CoTaskMemFree(pUseFormat);
+        CoTaskMemFree(pMixFormat);
         return false;
     }
     m_bufferEvent = hEvent;
 
-    // Initialize IAudioClient: shared mode, event-driven, 40 ms buffer.
-    const REFERENCE_TIME kBufferDuration = 400000LL; // 40 ms in 100-ns units
+    // Initialize with the mix format. Buffer period: 40 ms (400000 × 100 ns).
+    const REFERENCE_TIME kBufferDuration = 400000LL;
     hr = pAC->Initialize(AUDCLNT_SHAREMODE_SHARED,
                          AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
-                         kBufferDuration, 0, pUseFormat, nullptr);
-    if (usingMixFormat) { CoTaskMemFree(pUseFormat); pUseFormat = nullptr; }
+                         kBufferDuration, 0, pMixFormat, nullptr);
+    CoTaskMemFree(pMixFormat);  // Always free regardless of outcome.
+    pMixFormat = nullptr;
+
     if (FAILED(hr)) {
         LOG_ERROR("AudioPlayer: IAudioClient::Initialize failed. HRESULT=0x" + HrHex(hr));
         CloseHandle(hEvent); m_bufferEvent = nullptr;
@@ -207,7 +190,7 @@ bool AudioPlayer::Initialize(uint32_t sampleRate, uint32_t channelCount,
     m_renderClient = pRC;
 
     // ------------------------------------------------------------------
-    // Allocate ring buffer: ~100 ms.
+    // Allocate ring buffer: ~100 ms at the actual mix format rate.
     // ------------------------------------------------------------------
     const size_t bytesPerSec = static_cast<size_t>(m_sampleRate) * m_blockAlign;
     m_ringCap = ((bytesPerSec / 10 + m_blockAlign - 1) / m_blockAlign) * m_blockAlign;
