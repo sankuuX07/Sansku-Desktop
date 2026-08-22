@@ -8,6 +8,7 @@
 #include "VideoFrameQueue.h"
 #include "AudioReceiver.h"
 #include "AVSynchronizer.h"
+#include "PipelineStats.h"  // M13: lightweight periodic pipeline diagnostics
 
 #include <memory>
 #include <string>
@@ -42,6 +43,7 @@ private:
     std::unique_ptr<VideoReceiver>     m_videoReceiver;     // H264 decoder
     std::unique_ptr<VideoUdpReceiver>  m_videoUdpReceiver;  // UDP video transport
     std::unique_ptr<AudioReceiver>     m_audioReceiver;     // M11: AAC decoder + WASAPI playback
+    std::unique_ptr<PipelineStats>     m_pipelineStats;     // M13: periodic latency diagnostics
 
     bool m_isRunning;
 };

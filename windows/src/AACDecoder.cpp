@@ -233,6 +233,14 @@ bool AACDecoder::Initialize(uint32_t sampleRate, uint32_t channelCount)
     m_transform->ProcessMessage(MFT_MESSAGE_NOTIFY_BEGIN_STREAMING, 0);
     m_transform->ProcessMessage(MFT_MESSAGE_NOTIFY_START_OF_STREAM, 0);
 
+    // M13: cache output stream info once so DrainOutput() doesn't call
+    // GetOutputStreamInfo() (a COM query) on every decoded audio packet.
+    HRESULT hrSI = m_transform->GetOutputStreamInfo(0, &m_cachedStreamInfo);
+    if (FAILED(hrSI)) {
+        LOG_WARN("AACDecoder: GetOutputStreamInfo cache failed — DrainOutput may query per packet.");
+        m_cachedStreamInfo = {};
+    }
+
     m_initialized = true;
     LOG_INFO("AACDecoder: Ready (" + std::to_string(sampleRate) + " Hz, " +
              std::to_string(channelCount) + " ch, 16-bit PCM output).");
@@ -294,9 +302,15 @@ bool AACDecoder::SubmitPacket(const uint8_t* aacData, size_t aacSize,
 
 void AACDecoder::DrainOutput(uint64_t timestampUs)
 {
-    MFT_OUTPUT_STREAM_INFO si = {};
-    HRESULT hr = m_transform->GetOutputStreamInfo(0, &si);
-    if (FAILED(hr)) { LOG_ERROR("AACDecoder: GetOutputStreamInfo failed."); return; }
+    // M13: use cached stream info populated during Initialize().
+    // Avoids a COM query (GetOutputStreamInfo) on every audio packet.
+    // Falls back to a live query only if the cache is empty (safety guard).
+    MFT_OUTPUT_STREAM_INFO si = m_cachedStreamInfo;
+    if (si.cbSize == 0 && !(si.dwFlags & (MFT_OUTPUT_STREAM_PROVIDES_SAMPLES |
+                                          MFT_OUTPUT_STREAM_CAN_PROVIDE_SAMPLES))) {
+        HRESULT hr2 = m_transform->GetOutputStreamInfo(0, &si);
+        if (FAILED(hr2)) { LOG_ERROR("AACDecoder: GetOutputStreamInfo failed."); return; }
+    }
 
     const bool mftOwns =
         (si.dwFlags & (MFT_OUTPUT_STREAM_PROVIDES_SAMPLES |

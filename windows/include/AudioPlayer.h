@@ -62,6 +62,22 @@ public:
     bool IsPlaying()     const { return m_playing.load(); }
     bool IsInitialized() const { return m_initialized.load(); }
 
+    // M13: Returns approximate current audio queue depth in milliseconds.
+    // Useful for periodic pipeline diagnostics. Thread-safe.
+    uint32_t GetQueueDepthMs() const {
+        std::lock_guard<std::mutex> lock(m_bufferMutex);
+        if (m_sampleRate == 0 || m_blockAlign == 0) return 0;
+        const size_t bytesPerMs =
+            (static_cast<size_t>(m_sampleRate) * m_blockAlign) / 1000u;
+        return (bytesPerMs > 0)
+                   ? static_cast<uint32_t>(m_ringUsed / bytesPerMs)
+                   : 0u;
+    }
+
+    // M13: diagnostic counters — thread-safe atomic reads.
+    uint64_t GetUnderflowCount() const { return m_underflowCount.load(); }
+    uint64_t GetOverflowCount()  const { return m_overflowCount.load();  }
+
 private:
     void PlaybackThread();
 

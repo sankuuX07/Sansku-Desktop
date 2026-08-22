@@ -75,18 +75,27 @@ public:
     // A video frame more than this many µs AHEAD of the playback clock is
     // suspicious (clock jump or reconnect artifact). Render it anyway to avoid
     // blank screen — the clock will catch up.
-    static constexpr int64_t SYNC_TOLERANCE_EARLY_US = 500'000; // 500 ms
+    // M13: reduced 500 ms → 200 ms.  The encoder pipeline does not produce
+    // 500 ms of pre-roll; a 200 ms early window is a safe generous tolerance
+    // while preventing spurious early-frame passthrough.
+    static constexpr int64_t SYNC_TOLERANCE_EARLY_US = 200'000; // 200 ms
 
     // A video frame up to this many µs BEHIND the playback clock is within
     // normal jitter tolerance (≤ 1.5 frames at 30 fps). Render immediately.
     static constexpr int64_t SYNC_TOLERANCE_LATE_US  = 50'000;  // 50 ms
 
     // A video frame more than this many µs BEHIND the playback clock is
-    // stale. Drop it to prevent latency from growing (≈ 9 frames at 30 fps).
-    static constexpr int64_t SYNC_DROP_THRESHOLD_US  = 300'000; // 300 ms
+    // stale. Drop it to prevent latency from growing.
+    // M13: reduced 300 ms → 150 ms.
+    // At 60 fps, 300 ms tolerance allowed up to 18 stale frames to render
+    // before dropping, allowing significant latency to accumulate.  150 ms
+    // (9 frames at 60 fps, 4.5 frames at 30 fps) is a better compromise:
+    // tight enough to evict backlog quickly, wide enough to absorb normal jitter.
+    static constexpr int64_t SYNC_DROP_THRESHOLD_US  = 150'000; // 150 ms
 
-    // Log sync diagnostics every N rendered video frames (≈ 10 s at 30 fps).
-    static constexpr uint64_t SYNC_LOG_INTERVAL_FRAMES = 300;
+    // M13: log sync diagnostics every 150 rendered frames (~2.5 s at 60 fps,
+    // ~5 s at 30 fps).  Previously 300 frames gave too infrequent feedback.
+    static constexpr uint64_t SYNC_LOG_INTERVAL_FRAMES = 150;
 
     // ---------------------------------------------------------------------------
 

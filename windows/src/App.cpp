@@ -7,6 +7,9 @@ namespace SanskyStream {
 App::App() : m_isRunning(true) {
     LOG_INFO("Initializing Application...");
 
+    // M13: pipeline diagnostics — constructed first, available to Run() loop.
+    m_pipelineStats = std::make_unique<PipelineStats>();
+
     // -----------------------------------------------------------------------
     // M12: A/V Synchronizer — constructed first so all other components can
     // receive a raw pointer to it safely.  The synchronizer starts in the
@@ -157,6 +160,30 @@ void App::Run() {
 
         m_renderer->Render();
         m_window->DrawStatusOverlay();
+
+        // M13: periodic pipeline diagnostics — builds snapshot and logs every 5 s.
+        // Zero overhead between reports (QPC guard in PipelineStats::Report).
+        if (m_pipelineStats) {
+            PipelineStatsSnapshot snap;
+            if (m_videoReceiver) {
+                snap.framesReceived = m_videoReceiver->GetFramesReceived();
+                snap.framesDecoded  = m_videoReceiver->GetFramesDecoded();
+                snap.framesDropped  = m_videoReceiver->GetFramesDropped();
+            }
+            if (m_audioReceiver) {
+                snap.audioQueueMs    = m_audioReceiver->GetAudioQueueDepthMs();
+                snap.audioUnderflows = m_audioReceiver->GetUnderflowCount();
+                snap.audioOverflows  = m_audioReceiver->GetOverflowCount();
+            }
+            if (m_avSync) {
+                const SyncStats s    = m_avSync->GetStats();
+                snap.avAnchored      = s.isAnchored;
+                snap.avDiffUs        = s.avDiffUs;
+                snap.avSyncDrops     = s.droppedFrames;
+            }
+            snap.renderFps = m_renderer ? m_renderer->GetFPS() : 0.0f;
+            m_pipelineStats->Report(snap);
+        }
     }
 }
 

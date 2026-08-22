@@ -53,6 +53,13 @@ public:
     // Pass nullptr to disable sync filtering (pre-M12 behaviour).
     void SetAVSync(AVSynchronizer* sync);
 
+    // M13: diagnostic counter getters (read from render thread via PipelineStats).
+    // All counters are only written from the receive thread; reading from the
+    // render thread is safe on x86/x64 (64-bit aligned loads are atomic).
+    uint64_t GetFramesReceived() const { return m_framesReceived; }
+    uint64_t GetFramesDecoded()  const { return m_framesDecoded;  }
+    uint64_t GetFramesDropped()  const { return m_framesDropped;  }
+
 private:
     // Called by H264Decoder when a frame has been decoded.
     void OnDecodedFrame(DecodedFrame frame);
@@ -68,6 +75,12 @@ private:
     // Non-owning pointer to the AVSynchronizer (owned by App).
     // Null until SetAVSync() is called (M12).
     AVSynchronizer* m_avSync = nullptr;
+
+    // M13: frame counters for periodic diagnostic logging.
+    // Only accessed from the receive thread — no synchronisation needed.
+    uint64_t m_framesReceived = 0; // CompleteFrames handed to decoder
+    uint64_t m_framesDecoded  = 0; // DecodedFrames produced by decoder
+    uint64_t m_framesDropped  = 0; // Frames dropped by AVSync gate
 };
 
 } // namespace SanskyStream

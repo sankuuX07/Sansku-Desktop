@@ -2,6 +2,8 @@
 #include "AVSynchronizer.h"
 #include "Logger.h"
 
+#include <cstdint>
+
 namespace SanskyStream {
 
 // ---------------------------------------------------------------------------
@@ -35,12 +37,17 @@ void VideoReceiver::SetAVSync(AVSynchronizer* sync) {
 
 void VideoReceiver::OnCompleteFrame(CompleteFrame frame)
 {
-    // Diagnostic log retained from M6/M7.
-    LOG_INFO("CompleteFrame received"
-             " | ID: "       + std::to_string(frame.frameId) +
-             " | Size: "     + std::to_string(frame.data.size()) + " bytes" +
-             " | Keyframe: " + (frame.isKeyframe ? "YES" : "NO") +
-             " | PTS: "      + std::to_string(frame.presentationUs) + " µs");
+    // M13: periodic diagnostic log every 300 frames (~5 s at 60 fps).
+    // Per-frame LOG_INFO was causing ~60 std::to_string() heap allocations/sec
+    // on the hot receive path, adding measurable CPU cost.
+    ++m_framesReceived;
+    if (m_framesReceived % 300 == 1) {
+        LOG_INFO("CompleteFrame: " + std::to_string(m_framesReceived)
+                 + " received | last ID: " + std::to_string(frame.frameId)
+                 + " | " + std::to_string(frame.data.size()) + " bytes"
+                 + " | " + (frame.isKeyframe ? "KEYFRAME" : "P-frame")
+                 + " | PTS: " + std::to_string(frame.presentationUs) + " µs");
+    }
 
     // Submit to the H.264 decoder.  SubmitFrame is a no-op if:
     //   - the frame is not a keyframe and the decoder is not yet initialised,
@@ -59,17 +66,21 @@ void VideoReceiver::OnCompleteFrame(CompleteFrame frame)
 
 void VideoReceiver::OnDecodedFrame(DecodedFrame frame)
 {
-    LOG_INFO("DecodedFrame ready"
-             " | ID: "   + std::to_string(frame.frameId) +
-             " | "       + std::to_string(frame.width) + "x" + std::to_string(frame.height) +
-             " | NV12: " + std::to_string(frame.nv12Data.size()) + " bytes"
-             " | PTS: "  + std::to_string(frame.presentationUs) + " µs");
+    // M13: periodic log — every 300 decoded frames to avoid hot-path allocs.
+    ++m_framesDecoded;
+    if (m_framesDecoded % 300 == 1) {
+        LOG_INFO("DecodedFrame: " + std::to_string(m_framesDecoded)
+                 + " decoded | last ID: " + std::to_string(frame.frameId)
+                 + " | " + std::to_string(frame.width) + "x" + std::to_string(frame.height)
+                 + " | NV12: " + std::to_string(frame.nv12Data.size()) + " bytes"
+                 + " | PTS: " + std::to_string(frame.presentationUs) + " µs");
+    }
 
     // M12: synchronization gate — drop stale frames to prevent latency growth.
     if (m_avSync) {
         const FrameDecision decision = m_avSync->CheckVideoFrame(frame.presentationUs);
         if (decision == FrameDecision::Drop) {
-            // AVSynchronizer already logged the drop; just discard.
+            ++m_framesDropped; // M13: track for periodic stats
             return;
         }
     }

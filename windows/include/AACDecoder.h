@@ -82,6 +82,11 @@ private:
     uint32_t m_sampleRate    = 0;
     uint32_t m_channelCount  = 0;
     uint32_t m_bitsPerSample = 16; // Output is always 16-bit PCM
+
+    // M13: cached output stream info — populated once in Initialize() so that
+    // DrainOutput() does not call GetOutputStreamInfo() (a COM query) on every
+    // decoded audio packet.  Mirrors the same optimization in H264Decoder.
+    MFT_OUTPUT_STREAM_INFO m_cachedStreamInfo = {};
 };
 
 } // namespace SanskyStream

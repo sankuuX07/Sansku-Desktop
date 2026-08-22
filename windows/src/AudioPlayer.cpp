@@ -189,11 +189,14 @@ bool AudioPlayer::Initialize(uint32_t sampleRate, uint32_t channelCount,
     }
     m_renderClient = pRC;
 
-    // ------------------------------------------------------------------
-    // Allocate ring buffer: ~100 ms at the actual mix format rate.
-    // ------------------------------------------------------------------
+    // M13: Allocate ring buffer ~60 ms at the actual mix format rate.
+    // Reduced from ~100 ms: cuts audio pipeline latency by ~40 ms.
+    // 60 ms is still sufficient to absorb normal WASAPI callback jitter
+    // (WASAPI shared mode period ~10-40 ms depending on driver/device).
+    // Tradeoff: slightly higher underflow risk if network/decoder stalls for
+    // >60 ms; the underflow path fills with silence (no crash).
     const size_t bytesPerSec = static_cast<size_t>(m_sampleRate) * m_blockAlign;
-    m_ringCap = ((bytesPerSec / 10 + m_blockAlign - 1) / m_blockAlign) * m_blockAlign;
+    m_ringCap = ((bytesPerSec * 60 / 1000 + m_blockAlign - 1) / m_blockAlign) * m_blockAlign;
     if (m_ringCap < 4096) m_ringCap = 4096;
 
     m_ring.assign(m_ringCap, 0);
@@ -203,7 +206,7 @@ bool AudioPlayer::Initialize(uint32_t sampleRate, uint32_t channelCount,
     LOG_INFO("AudioPlayer: Ready. WASAPI buffer=" +
              std::to_string(m_wasapiFrames) + " frames (~" +
              std::to_string(m_wasapiFrames * 1000 / m_sampleRate) +
-             " ms). Ring buffer=" + std::to_string(m_ringCap) + " bytes (~100 ms).");
+             " ms). Ring buffer=" + std::to_string(m_ringCap) + " bytes (~60 ms). [M13]");
     return true;
 }
 

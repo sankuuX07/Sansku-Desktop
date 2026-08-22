@@ -63,6 +63,20 @@ public:
 
     bool IsRunning() const { return m_running; }
 
+    // M13: diagnostic getters for PipelineStats reporting.
+    // Audio queue depth in milliseconds (from AudioPlayer ring buffer).
+    uint32_t GetAudioQueueDepthMs() const {
+        return m_player ? m_player->GetQueueDepthMs() : 0u;
+    }
+    // Cumulative WASAPI underflow events (silence insertions).
+    uint64_t GetUnderflowCount() const {
+        return m_player ? m_player->GetUnderflowCount() : 0u;
+    }
+    // Cumulative ring buffer overflow events (oldest samples dropped).
+    uint64_t GetOverflowCount() const {
+        return m_player ? m_player->GetOverflowCount() : 0u;
+    }
+
 private:
     void OnDecodedAudio(DecodedAudioPacket packet);
 

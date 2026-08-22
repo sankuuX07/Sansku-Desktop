@@ -9,6 +9,9 @@ class VideoEncoder {
 
     private var compressionSession: VTCompressionSession?
 
+    // M13: frame counter for periodic diagnostic logging (avoids per-frame string allocs).
+    private var encodedFrameCount: UInt64 = 0
+
     // -----------------------------------------------------------------------
     // M6 transport callback.
     // Invoked from the VideoToolbox callback queue whenever an encoded frame
@@ -66,18 +69,28 @@ class VideoEncoder {
         let fps: NSNumber = 60
         VTSessionSetProperty(session, key: kVTCompressionPropertyKey_ExpectedFrameRate, value: fps)
 
-        // Keyframe interval (IDR frames) - e.g., every 2 seconds
-        let keyframeInterval: NSNumber = 120 // 60fps * 2s
+        // M13: Keyframe interval — 60 frames (1 s at 60 fps, down from 120 / 2 s).
+        // Shorter interval: after UDP packet loss the decoder recovers in ≤ 1 s
+        // instead of ≤ 2 s.  Trade-off: slightly larger keyframes, negligible on LAN.
+        let keyframeInterval: NSNumber = 60 // 60fps * 1s
         VTSessionSetProperty(session, key: kVTCompressionPropertyKey_MaxKeyFrameInterval, value: keyframeInterval)
+
+        // M13: MaxFrameDelayCount = 0 — do not buffer output frames.
+        // Without this, VideoToolbox may hold encoded frames to optimise quality.
+        // For real-time streaming, zero output buffering is always preferable.
+        let zeroDelay: NSNumber = 0
+        VTSessionSetProperty(session, key: kVTCompressionPropertyKey_MaxFrameDelayCount, value: zeroDelay)
 
         // Average Bitrate (e.g., 4 Mbps)
         let averageBitrate: NSNumber = 4_000_000
         VTSessionSetProperty(session, key: kVTCompressionPropertyKey_AverageBitRate, value: averageBitrate)
 
-        // Data rate limits (Bytes per second, seconds)
-        // e.g., max 500 KB per second
-        let dataRateLimits = [500_000, 1] as CFArray
-        VTSessionSetProperty(session, key: kVTCompressionPropertyKey_DataRateLimits, value: dataRateLimits)
+        // M13: DataRateLimits REMOVED.
+        // The previous limit of [500_000, 1] (500 KB/s burst = 4 Mbps peak) could
+        // stall the encoder on scene changes or keyframes, both of which can briefly
+        // exceed that burst cap and force the encoder to delay output.  For LAN
+        // streaming, the AverageBitRate already governs long-term bandwidth; the
+        // burst limiter adds latency without meaningful benefit on a local network.
 
         // Prepare the session
         VTCompressionSessionPrepareToEncodeFrames(session)
@@ -164,9 +177,14 @@ class VideoEncoder {
             return
         }
 
-        // 4. Log
-        let frameType = isKeyframe ? "KEYFRAME (IDR)" : "P-FRAME"
-        print("SanskyStream Encoded H.264 -> [\(frameType)] | Size: \(naluData.count) bytes | PTS: \(presentationUs) µs")
+        // 4. M13: periodic log — every 300 encoded frames (~5 s at 60 fps).
+        // Per-frame logging caused ~60 string allocations/second on the encode callback
+        // thread, adding measurable CPU overhead and log noise.
+        encodedFrameCount += 1
+        if encodedFrameCount % 300 == 1 {
+            let frameType = isKeyframe ? "KEYFRAME (IDR)" : "P-FRAME"
+            print("SanskyStream VideoEncoder: \(encodedFrameCount) frames encoded | last [\(frameType)] | Size: \(naluData.count) bytes | PTS: \(presentationUs) µs")
+        }
 
         // 5. Dispatch to the transport layer (M6)
         onEncodedFrame?(naluData, presentationUs, isKeyframe)
