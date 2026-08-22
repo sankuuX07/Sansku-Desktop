@@ -104,6 +104,23 @@ bool VideoUdpReceiver::Start(uint16_t port)
                  std::to_string(WSAGetLastError()));
     }
 
+    // M13: Enlarge the OS-level UDP receive buffer to 256 KB.
+    // At 60fps with several 1300-byte fragments per frame, the default OS
+    // buffer (typically 64–256 KB) can overflow if the receive thread is
+    // momentarily busy, causing silent packet loss that manifests as video
+    // corruption or frame gaps.  256 KB gives ~200 full 1300-byte datagrams
+    // of headroom, which is well above any 60fps burst.
+    int rcvBufSize = 256 * 1024;
+    if (setsockopt(m_socket, SOL_SOCKET, SO_RCVBUF,
+                   reinterpret_cast<const char*>(&rcvBufSize),
+                   static_cast<int>(sizeof(rcvBufSize))) == SOCKET_ERROR) {
+        LOG_WARN("VideoUdpReceiver: SO_RCVBUF failed. WSA error: " +
+                 std::to_string(WSAGetLastError()) +
+                 " (non-fatal — default OS buffer retained).");
+    } else {
+        LOG_INFO("VideoUdpReceiver: SO_RCVBUF set to 256 KB.");
+    }
+
     sockaddr_in addr = {};
     addr.sin_family      = AF_INET;
     addr.sin_addr.s_addr = INADDR_ANY;

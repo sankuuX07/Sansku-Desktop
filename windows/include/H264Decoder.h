@@ -142,6 +142,14 @@ private:
     uint32_t                             m_height          = 0;
     uint64_t                             m_lastDecodedPtsUs = 0;
 
+    // M13: cached output stream info — populated by InitializeMFT() and
+    // re-populated by RenegotiateOutputType().  Avoids a COM query
+    // (GetOutputStreamInfo) on every call to DrainOutput().
+    MFT_OUTPUT_STREAM_INFO               m_cachedStreamInfo = {};
+
+    // M13: frame counter for periodic diagnostic logging.
+    uint64_t                             m_decodedFrameCount = 0;
+
     // Stale-frame threshold: discard frames more than 500 ms behind the
     // most recently decoded frame.
     static constexpr uint64_t STALE_THRESHOLD_US = 500'000; // 500 ms

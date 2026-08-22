@@ -371,6 +371,15 @@ bool H264Decoder::InitializeMFT(uint32_t width, uint32_t height)
     m_state = State::Running;
     LOG_INFO("H264Decoder: MFT initialized successfully (" +
              std::to_string(width) + "x" + std::to_string(height) + ").");
+
+    // M13: cache the stream info so DrainOutput() doesn't need to call
+    // GetOutputStreamInfo() (a COM query) on every decoded frame.
+    hr = m_transform->GetOutputStreamInfo(0, &m_cachedStreamInfo);
+    if (FAILED(hr)) {
+        LOG_WARN("H264Decoder: GetOutputStreamInfo (cache) failed — DrainOutput may be inefficient.");
+        m_cachedStreamInfo = {};
+    }
+
     return true;
 }
 
@@ -442,6 +451,12 @@ void H264Decoder::RenegotiateOutputType()
                          std::to_string(w) + "x" + std::to_string(h) + ".");
             }
         }
+        // M13: re-populate the cached stream info after format change.
+        HRESULT hr = m_transform->GetOutputStreamInfo(0, &m_cachedStreamInfo);
+        if (FAILED(hr)) {
+            LOG_WARN("H264Decoder: GetOutputStreamInfo re-cache failed.");
+            m_cachedStreamInfo = {};
+        }
     }
 }
 
@@ -451,17 +466,14 @@ void H264Decoder::RenegotiateOutputType()
 
 void H264Decoder::DrainOutput(uint32_t frameId, uint64_t presentationUs)
 {
-    // Check if the MFT provides its own output samples.
-    MFT_OUTPUT_STREAM_INFO streamInfo = {};
-    HRESULT hr = m_transform->GetOutputStreamInfo(0, &streamInfo);
-    if (FAILED(hr)) {
-        LOG_ERROR("H264Decoder: GetOutputStreamInfo failed.");
-        return;
-    }
-
+    // M13: Cache the output stream info after InitializeMFT so we don't
+    // call GetOutputStreamInfo() (a COM query) on every decode call.
+    // m_cachedStreamInfo is populated by InitializeMFT() and remains valid
+    // as long as the MFT is running (it only changes on stream format change,
+    // which triggers RenegotiateOutputType anyway).
     const bool mftProvidesSamples =
-        (streamInfo.dwFlags & (MFT_OUTPUT_STREAM_PROVIDES_SAMPLES |
-                               MFT_OUTPUT_STREAM_CAN_PROVIDE_SAMPLES)) != 0;
+        (m_cachedStreamInfo.dwFlags & (MFT_OUTPUT_STREAM_PROVIDES_SAMPLES |
+                                       MFT_OUTPUT_STREAM_CAN_PROVIDE_SAMPLES)) != 0;
 
     // Drain in a loop — the MFT may produce multiple output samples
     // per call to ProcessInput (unusual for H.264, but possible).
@@ -570,11 +582,16 @@ void H264Decoder::DrainOutput(uint32_t frameId, uint64_t presentationUs)
 
             m_lastDecodedPtsUs = presentationUs;
 
-            LOG_INFO("H264Decoder: DecodedFrame"
-                     " | ID: "     + std::to_string(decoded.frameId) +
-                     " | "         + std::to_string(decoded.width) + "x" + std::to_string(decoded.height) +
-                     " | NV12: "   + std::to_string(decoded.nv12Data.size()) + " bytes" +
-                     " | PTS: "    + std::to_string(decoded.presentationUs) + " \xc2\xb5s");
+            // M13: periodic diagnostic log (every 300 decoded frames ≈ 10 s at 30fps).
+            // Per-frame LOG_INFO was causing string formatting on the hot path
+            // (~60 allocations/second, ~1-3 ms CPU per second).
+            ++m_decodedFrameCount;
+            if (m_decodedFrameCount % 300 == 1) {
+                LOG_INFO("H264Decoder: " + std::to_string(m_decodedFrameCount) +
+                         " frames decoded | "
+                         + std::to_string(decoded.width) + "x" + std::to_string(decoded.height)
+                         + " | last PTS: " + std::to_string(decoded.presentationUs) + " µs");
+            }
 
             if (m_callback) {
                 m_callback(std::move(decoded));

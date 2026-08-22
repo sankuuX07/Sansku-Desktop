@@ -12,6 +12,9 @@ namespace SanskyStream {
 // Maximum audio payload we will buffer in one receive (4 MiB safety cap).
 static constexpr uint32_t MAX_AUDIO_PAYLOAD_SIZE = 4 * 1024 * 1024;
 
+// Initial receive buffer capacity (grows if needed, never shrinks).
+static constexpr size_t RECV_BUF_INITIAL = 64 * 1024; // 64 KiB
+
 // ---------------------------------------------------------------------------
 // Construction / destruction
 // ---------------------------------------------------------------------------
@@ -29,6 +32,8 @@ Network::Network()
     } else {
         LOG_INFO("WinSock2 initialized.");
     }
+    // Pre-allocate the reusable payload buffer to avoid per-packet heap churn.
+    m_recvBuffer.reserve(RECV_BUF_INITIAL);
 }
 
 Network::~Network() {
@@ -191,6 +196,24 @@ void Network::ServerThread() {
         LOG_INFO("Client connected.");
         if (m_statusCallback) m_statusCallback("Connected");
 
+        // M13: TCP_NODELAY — disable Nagle's algorithm on the accepted client
+        // socket.  Without this, the OS may hold small writes (e.g. audio
+        // packet headers) for up to 200 ms before flushing, causing visible
+        // audio-visual latency.  This is safe: our packets are already framed
+        // at the application layer; we do not rely on Nagle coalescing.
+        {
+            int noDelay = 1;
+            if (setsockopt(clientSock, IPPROTO_TCP, TCP_NODELAY,
+                           reinterpret_cast<const char*>(&noDelay),
+                           static_cast<int>(sizeof(noDelay))) == SOCKET_ERROR) {
+                LOG_WARN("Network: TCP_NODELAY failed. WSA error: " +
+                         std::to_string(WSAGetLastError()) +
+                         " (non-fatal — Nagle's algorithm remains enabled).");
+            } else {
+                LOG_INFO("Network: TCP_NODELAY enabled on client socket.");
+            }
+        }
+
         // ------------------------------------------------------------------
         // Receive loop — read framed packets.
         // ------------------------------------------------------------------
@@ -231,26 +254,27 @@ void Network::ServerThread() {
                 break;
             }
 
-            // Read the payload.
-            std::vector<uint8_t> payload(payloadSize);
+            // M13: reuse m_recvBuffer to avoid a heap allocation per packet.
+            // resize() only re-allocates when the new size exceeds capacity.
             if (payloadSize > 0) {
-                if (!RecvExact(clientSock, payload.data(), payloadSize)) break;
+                m_recvBuffer.resize(payloadSize);
+                if (!RecvExact(clientSock, m_recvBuffer.data(), payloadSize)) break;
             }
 
             // Dispatch by packet type.
             switch (pktType) {
             case Protocol::PacketType::Audio:
-                if (m_audioCallback && !payload.empty()) {
-                    m_audioCallback(payload.data(), payload.size());
+                if (m_audioCallback && payloadSize > 0) {
+                    m_audioCallback(m_recvBuffer.data(), payloadSize);
                 }
                 break;
 
             case Protocol::PacketType::Control:
                 // Log control messages as plain text (existing behavior).
-                if (!payload.empty()) {
+                if (payloadSize > 0) {
                     LOG_INFO("Received control message: " +
-                             std::string(reinterpret_cast<const char*>(payload.data()),
-                                         payload.size()));
+                             std::string(reinterpret_cast<const char*>(m_recvBuffer.data()),
+                                         payloadSize));
                 }
                 break;
 

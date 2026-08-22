@@ -67,6 +67,10 @@ private:
     std::thread         m_serverThread;
     std::atomic<bool>   m_isRunning;
     std::atomic<bool>   m_isConnected;
+
+    // M13: reusable receive buffer — avoids per-packet heap allocation.
+    // Only accessed from ServerThread; no synchronisation needed.
+    std::vector<uint8_t> m_recvBuffer;
 };
 
 } // namespace SanskyStream
