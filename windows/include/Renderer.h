@@ -10,6 +10,9 @@
 
 namespace SanskyStream {
 
+// Forward declaration — keeps AVSynchronizer.h / windows.h out of Renderer.h.
+class AVSynchronizer;
+
 // ---------------------------------------------------------------------------
 // Renderer  (M8)
 //
@@ -43,6 +46,11 @@ public:
     // Connect the VideoFrameQueue that supplies decoded frames.
     // Call after Initialize(), before the render loop.
     void SetFrameQueue(VideoFrameQueue* queue);
+
+    // Connect the A/V synchronizer (M12).
+    // When set, sync statistics are included in the FPS overlay (~1 Hz).
+    // Pass nullptr to disable (pre-M12 behaviour).
+    void SetAVSync(AVSynchronizer* sync);
 
     // Handle a window resize event.
     // Called automatically inside Render() via Window::TakeResizePending().
@@ -107,6 +115,10 @@ private:
     // Frame queue (non-owning, owned by App)
     // -----------------------------------------------------------------------
     VideoFrameQueue* m_frameQueue = nullptr;
+
+    // Non-owning pointer to the AVSynchronizer (owned by App) — M12.
+    // Used only for stats display in the FPS overlay.
+    AVSynchronizer* m_avSync = nullptr;
 
     // -----------------------------------------------------------------------
     // Video display state

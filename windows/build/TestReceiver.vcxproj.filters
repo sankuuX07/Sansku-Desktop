@@ -19,6 +19,9 @@
     <ClCompile Include="C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\src\H264Decoder.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\src\AVSynchronizer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\src\Logger.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

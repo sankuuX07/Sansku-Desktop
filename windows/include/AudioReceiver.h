@@ -9,8 +9,11 @@
 
 namespace SanskyStream {
 
+// Forward declaration — keeps AVSynchronizer.h out of this header.
+class AVSynchronizer;
+
 // ---------------------------------------------------------------------------
-// AudioReceiver — M11
+// AudioReceiver — M11 / M12
 //
 // Owns and wires the full audio pipeline:
 //
@@ -18,6 +21,7 @@ namespace SanskyStream {
 //        ↓  parse AudioPayloadHeader (timestamp + AAC data)
 //   AACDecoder::SubmitPacket()          [inline decode on network thread]
 //        ↓  callback: OnDecodedAudio()
+//   AVSynchronizer::NotifyAudioTimestamp()   [M12 — establishes clock anchor]
 //   AudioPlayer::SubmitPCM()            [thread-safe ring buffer write]
 //        ↓
 //   AudioPlayer playback thread → WASAPI → speakers
@@ -25,10 +29,11 @@ namespace SanskyStream {
 // Threading:
 //   OnAudioPacketReceived() is called from the Network thread.
 //   AACDecoder is single-threaded (network thread only).
+//   AVSynchronizer::NotifyAudioTimestamp() is thread-safe (internally locked).
 //   AudioPlayer::SubmitPCM() is thread-safe (ring buffer + mutex).
 //
 // Lifecycle:
-//   Construct → Start() → OnAudioPacketReceived() (many) → Stop()
+//   Construct → SetAVSync() [optional] → Start() → OnAudioPacketReceived() (many) → Stop()
 // ---------------------------------------------------------------------------
 class AudioReceiver {
 public:
@@ -37,6 +42,11 @@ public:
 
     AudioReceiver(const AudioReceiver&)            = delete;
     AudioReceiver& operator=(const AudioReceiver&) = delete;
+
+    // Connect the A/V synchronizer (M12).
+    // Must be called before Start() if sync is desired.
+    // Pass nullptr to disable (pre-M12 behaviour).
+    void SetAVSync(AVSynchronizer* sync);
 
     // Initialize decoder + player and start playback.
     // sampleRate/channelCount: expected iOS audio format.
@@ -58,6 +68,10 @@ private:
 
     std::unique_ptr<AACDecoder>  m_decoder;
     std::unique_ptr<AudioPlayer> m_player;
+
+    // Non-owning pointer to the shared AVSynchronizer (owned by App).
+    // Null until SetAVSync() is called.
+    AVSynchronizer* m_avSync = nullptr;
 
     bool     m_running         = false;
     uint64_t m_packetsReceived = 0;

@@ -9,6 +9,7 @@
 	</Configurations>
 	<Project Path="ALL_BUILD.vcxproj" Type="8bc9ceb8-8b4a-11d0-8d11-00a0c91bc942" Id="83ca85e7-771a-3c2b-a20e-ad08cf4fccfe" DefaultStartup="true">
 		<BuildDependency Project="SanskyStream_Windows.vcxproj"/>
+		<BuildDependency Project="TestAVSync.vcxproj"/>
 		<BuildDependency Project="TestAudioPipeline.vcxproj"/>
 		<BuildDependency Project="TestDecoder.vcxproj"/>
 		<BuildDependency Project="TestReceiver.vcxproj"/>
@@ -21,6 +22,9 @@
 		<Build Solution="RelWithDebInfo|*" Project="false"/>
 	</Project>
 	<Project Path="SanskyStream_Windows.vcxproj" Type="8bc9ceb8-8b4a-11d0-8d11-00a0c91bc942" Id="823b312b-010d-352b-a377-dc40adc89d9a">
+		<BuildDependency Project="ZERO_CHECK.vcxproj"/>
+	</Project>
+	<Project Path="TestAVSync.vcxproj" Type="8bc9ceb8-8b4a-11d0-8d11-00a0c91bc942" Id="3396f065-3cfd-3391-821d-c2ebc9bace1b">
 		<BuildDependency Project="ZERO_CHECK.vcxproj"/>
 	</Project>
 	<Project Path="TestAudioPipeline.vcxproj" Type="8bc9ceb8-8b4a-11d0-8d11-00a0c91bc942" Id="4790752a-f65f-3375-9bcf-579c174f58e1">

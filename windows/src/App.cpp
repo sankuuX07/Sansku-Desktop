@@ -8,6 +8,13 @@ App::App() : m_isRunning(true) {
     LOG_INFO("Initializing Application...");
 
     // -----------------------------------------------------------------------
+    // M12: A/V Synchronizer — constructed first so all other components can
+    // receive a raw pointer to it safely.  The synchronizer starts in the
+    // unanchored state; the first decoded audio packet sets the clock anchor.
+    // -----------------------------------------------------------------------
+    m_avSync = std::make_unique<AVSynchronizer>();
+
+    // -----------------------------------------------------------------------
     // Window
     // -----------------------------------------------------------------------
     m_window = std::make_unique<Window>(1280, 720, L"SanskyStream Client");
@@ -26,6 +33,8 @@ App::App() : m_isRunning(true) {
         m_isRunning = false;
         return;
     }
+    // M12: give the renderer a non-owning pointer so it can display sync stats.
+    m_renderer->SetAVSync(m_avSync.get());
 
     // -----------------------------------------------------------------------
     // VideoFrameQueue — single-slot latest-frame store shared between
@@ -35,9 +44,11 @@ App::App() : m_isRunning(true) {
 
     // -----------------------------------------------------------------------
     // VideoReceiver — owns H264Decoder (M7); decoded frames go to the queue.
+    // M12: wire AVSynchronizer so stale frames are dropped before enqueuing.
     // -----------------------------------------------------------------------
     m_videoReceiver = std::make_unique<VideoReceiver>();
     m_videoReceiver->SetFrameQueue(m_frameQueue.get());
+    m_videoReceiver->SetAVSync(m_avSync.get());  // M12
     m_renderer->SetFrameQueue(m_frameQueue.get());
 
     // -----------------------------------------------------------------------
@@ -54,12 +65,12 @@ App::App() : m_isRunning(true) {
 
     // -----------------------------------------------------------------------
     // AudioReceiver — M11: AAC decoder + WASAPI playback.
-    // Start with default parameters; the actual format will be negotiated
-    // from the MFT output type on the first decoded packet.
+    // M12: wire AVSynchronizer so decoded audio timestamps anchor the clock.
     // -----------------------------------------------------------------------
     m_audioReceiver = std::make_unique<AudioReceiver>();
+    m_audioReceiver->SetAVSync(m_avSync.get());  // M12 — must be set before Start()
     if (!m_audioReceiver->Start(Protocol::AUDIO_DEFAULT_SAMPLE_RATE,
-                                 Protocol::AUDIO_DEFAULT_CHANNELS)) {
+                                Protocol::AUDIO_DEFAULT_CHANNELS)) {
         LOG_WARN("AudioReceiver failed to start. Audio playback disabled.");
         // Non-fatal: video pipeline continues.
         m_audioReceiver.reset();
@@ -104,11 +115,20 @@ App::~App() {
     if (m_network) {
         m_network->StopServer();
     }
+    // m_avSync is destroyed last (it is the first member declared in App.h,
+    // so it is destroyed last by C++ destruction order — correct).
     LOG_INFO("Application shutting down.");
 }
 
 // Called from the network thread — only updates window state (fast).
 void App::OnNetworkStatus(const std::string& status) {
+    // M12: reset the synchronizer on disconnect so stale timestamps from the
+    // previous stream do not corrupt the next connection.
+    if (status == "Waiting for Device..." && m_avSync) {
+        m_avSync->Reset();
+        LOG_INFO("App: AVSynchronizer reset on client disconnect.");
+    }
+
     if (m_window) {
         m_window->SetStatusText(
             "SanskyStream\\r\\n\\r\\nStatus: " + status +

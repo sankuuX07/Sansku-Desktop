@@ -178,6 +178,10 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
       <Project>{823B312B-010D-352B-A377-DC40ADC89D9A}</Project>
       <Name>SanskyStream_Windows</Name>
     </ProjectReference>
+    <ProjectReference Include="C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\build\TestAVSync.vcxproj">
+      <Project>{3396F065-3CFD-3391-821D-C2EBC9BACE1B}</Project>
+      <Name>TestAVSync</Name>
+    </ProjectReference>
     <ProjectReference Include="C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\build\TestAudioPipeline.vcxproj">
       <Project>{4790752A-F65F-3375-9BCF-579C174F58E1}</Project>
       <Name>TestAudioPipeline</Name>

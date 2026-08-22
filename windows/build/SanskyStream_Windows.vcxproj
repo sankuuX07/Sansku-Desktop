@@ -384,6 +384,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ClCompile Include="C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\src\AudioReceiver.cpp" />
     <ClCompile Include="C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\src\AACDecoder.cpp" />
     <ClCompile Include="C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\src\AudioPlayer.cpp" />
+    <ClCompile Include="C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\src\AVSynchronizer.cpp" />
     <ClCompile Include="C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\src\Decoder.cpp" />
     <ClCompile Include="C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\src\Renderer.cpp" />
     <ClCompile Include="C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\src\Logger.cpp" />

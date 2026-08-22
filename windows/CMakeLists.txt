@@ -21,6 +21,7 @@ set(SOURCES
     src/AudioReceiver.cpp        # M11: rewired to AACDecoder + AudioPlayer
     src/AACDecoder.cpp           # M11: MFT AAC decoder
     src/AudioPlayer.cpp          # M11: WASAPI low-latency playback
+    src/AVSynchronizer.cpp       # M12: audio-anchored A/V sync
     src/Decoder.cpp
     src/Renderer.cpp
     src/Logger.cpp
@@ -87,6 +88,7 @@ add_executable(TestReceiver
     src/VideoReceiver.cpp
     src/VideoFrameQueue.cpp
     src/H264Decoder.cpp
+    src/AVSynchronizer.cpp       # M12: VideoReceiver now calls CheckVideoFrame()
     src/Logger.cpp
 )
 
@@ -117,6 +119,7 @@ add_executable(TestDecoder
     src/VideoReceiver.cpp
     src/VideoFrameQueue.cpp
     src/FrameAssembler.cpp
+    src/AVSynchronizer.cpp       # M12: VideoReceiver now calls CheckVideoFrame()
     src/Logger.cpp
 )
 
@@ -146,6 +149,7 @@ add_executable(TestRenderPipeline
     src/Window.cpp
     src/Renderer.cpp
     src/VideoFrameQueue.cpp
+    src/AVSynchronizer.cpp       # M12: Renderer::Render() calls GetStats()
     src/Logger.cpp
 )
 
@@ -183,6 +187,7 @@ add_executable(TestAudioPipeline
     src/AACDecoder.cpp
     src/AudioPlayer.cpp
     src/AudioReceiver.cpp
+    src/AVSynchronizer.cpp       # M12: AudioReceiver now calls NotifyAudioTimestamp()
     src/Logger.cpp
 )
 
@@ -202,5 +207,36 @@ target_link_libraries(TestAudioPipeline PRIVATE
 if(MSVC)
     target_compile_options(TestAudioPipeline PRIVATE /W4 /WX /EHsc)
     target_compile_definitions(TestAudioPipeline PRIVATE
+        UNICODE _UNICODE WIN32_LEAN_AND_MEAN NOMINMAX)
+endif()
+
+# ---------------------------------------------------------------------------
+# TestAVSync — M12 AVSynchronizer unit test harness.
+#
+# Tests the timing/scheduling logic of AVSynchronizer in isolation.
+# No network, no real audio, no real video needed.
+#
+# Usage:
+#   cmake --build . --target TestAVSync
+#   .\TestAVSync.exe
+# ---------------------------------------------------------------------------
+add_executable(TestAVSync
+    src/TestAVSync.cpp
+    src/AVSynchronizer.cpp
+    src/Logger.cpp
+)
+
+target_include_directories(TestAVSync PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/../protocol
+)
+
+target_link_libraries(TestAVSync PRIVATE
+    ws2_32
+)
+
+if(MSVC)
+    target_compile_options(TestAVSync PRIVATE /W4 /WX /EHsc)
+    target_compile_definitions(TestAVSync PRIVATE
         UNICODE _UNICODE WIN32_LEAN_AND_MEAN NOMINMAX)
 endif()

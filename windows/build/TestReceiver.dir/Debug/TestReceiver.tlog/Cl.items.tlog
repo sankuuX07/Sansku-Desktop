@@ -4,4 +4,5 @@ C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\src\FrameAssembler.cpp;C:\U
 C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\src\VideoReceiver.cpp;C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\build\TestReceiver.dir\Debug\VideoReceiver.obj
 C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\src\VideoFrameQueue.cpp;C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\build\TestReceiver.dir\Debug\VideoFrameQueue.obj
 C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\src\H264Decoder.cpp;C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\build\TestReceiver.dir\Debug\H264Decoder.obj
+C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\src\AVSynchronizer.cpp;C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\build\TestReceiver.dir\Debug\AVSynchronizer.obj
 C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\src\Logger.cpp;C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\build\TestReceiver.dir\Debug\Logger.obj

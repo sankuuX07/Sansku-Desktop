@@ -1,4 +1,5 @@
 #include "Renderer.h"
+#include "AVSynchronizer.h"
 #include "Logger.h"
 
 #include <d3dcompiler.h>
@@ -268,6 +269,14 @@ void Renderer::SetFrameQueue(VideoFrameQueue* queue) {
 }
 
 // ---------------------------------------------------------------------------
+// SetAVSync (M12)
+// ---------------------------------------------------------------------------
+
+void Renderer::SetAVSync(AVSynchronizer* sync) {
+    m_avSync = sync;
+}
+
+// ---------------------------------------------------------------------------
 // ClearColor  (legacy public helper — kept for API compatibility)
 // ---------------------------------------------------------------------------
 
@@ -380,6 +389,20 @@ void Renderer::Render() {
         } else {
             status += "Waiting for video...";
         }
+
+        // M12: append lightweight A/V sync diagnostics (~1 Hz, zero per-frame cost).
+        if (m_avSync) {
+            const SyncStats s = m_avSync->GetStats();
+            char syncBuf[128];
+            const double avMs = static_cast<double>(s.avDiffUs) / 1000.0;
+            snprintf(syncBuf, sizeof(syncBuf),
+                     "\r\nA/V: %+.0f ms | Drop: %llu | %s",
+                     avMs,
+                     static_cast<unsigned long long>(s.droppedFrames),
+                     s.isAnchored ? "Synced" : "Unsynced");
+            status += syncBuf;
+        }
+
         m_window->SetStatusText(status);
     }
 

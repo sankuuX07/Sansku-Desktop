@@ -1,4 +1,5 @@
 #include "AudioReceiver.h"
+#include "AVSynchronizer.h"
 #include "Logger.h"
 #include "Protocol.h"
 
@@ -18,6 +19,15 @@ static constexpr size_t kAudioHeaderSize = sizeof(Protocol::AudioPayloadHeader);
 
 AudioReceiver::AudioReceiver()  = default;
 AudioReceiver::~AudioReceiver() { Stop(); }
+
+// ---------------------------------------------------------------------------
+// SetAVSync (M12)
+// ---------------------------------------------------------------------------
+
+void AudioReceiver::SetAVSync(AVSynchronizer* sync)
+{
+    m_avSync = sync;
+}
 
 // ---------------------------------------------------------------------------
 // Start
@@ -153,13 +163,17 @@ void AudioReceiver::OnDecodedAudio(DecodedAudioPacket packet)
 {
     if (!m_player || packet.pcmData.empty()) return;
 
+    // M12: notify the A/V synchronizer of this audio timestamp so it can
+    // establish (or maintain) the playback clock anchor.
+    // The first non-zero call anchors the clock; subsequent calls update
+    // m_lastAudioPtsUs for drift detection.
+    if (m_avSync && packet.timestampUs > 0) {
+        m_avSync->NotifyAudioTimestamp(packet.timestampUs);
+    }
+
     // Submit PCM to the player's ring buffer.
     // AudioPlayer::SubmitPCM() is thread-safe.
     m_player->SubmitPCM(packet.pcmData.data(), packet.pcmData.size());
-
-    // Timestamps are preserved in the packet for M12 A/V synchronization.
-    // M11 does not use them for playback timing.
-    (void)packet.timestampUs;
 }
 
 } // namespace SanskyStream
