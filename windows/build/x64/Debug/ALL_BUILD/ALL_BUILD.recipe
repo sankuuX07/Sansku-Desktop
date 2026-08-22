@@ -8,6 +8,21 @@
       <FullPath>C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\build\Debug\SanskyStream_Windows.exe</FullPath>
     </ProjectOutput>
     <ProjectOutput>
+      <FullPath>C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\build\Debug\TestAudioPipeline.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\build\Debug\TestDecoder.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\build\Debug\TestReceiver.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\build\Debug\TestRenderPipeline.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\build\Debug\TestVideoSender.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
       <FullPath>C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\build\x64\Debug\ALL_BUILD</FullPath>
     </ProjectOutput>
   </ProjectOutputs>

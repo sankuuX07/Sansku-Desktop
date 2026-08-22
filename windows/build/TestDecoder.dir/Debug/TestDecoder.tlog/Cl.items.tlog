@@ -1,5 +1,6 @@
 C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\src\TestDecoder.cpp;C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\build\TestDecoder.dir\Debug\TestDecoder.obj
 C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\src\H264Decoder.cpp;C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\build\TestDecoder.dir\Debug\H264Decoder.obj
 C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\src\VideoReceiver.cpp;C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\build\TestDecoder.dir\Debug\VideoReceiver.obj
+C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\src\VideoFrameQueue.cpp;C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\build\TestDecoder.dir\Debug\VideoFrameQueue.obj
 C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\src\FrameAssembler.cpp;C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\build\TestDecoder.dir\Debug\FrameAssembler.obj
 C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\src\Logger.cpp;C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\build\TestDecoder.dir\Debug\Logger.obj
