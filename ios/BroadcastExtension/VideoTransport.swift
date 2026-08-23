@@ -68,6 +68,12 @@ final class VideoTransport {
     /// Frame counter, incremented for every call to sendFrame().
     private var frameId: UInt32 = 0
 
+    /// M13: Reusable send buffer. Pre-allocated to the maximum datagram size
+    /// (header + max payload) to eliminate per-fragment heap allocation.
+    /// sendFrame() calls happen serially on the ReplayKit callback queue,
+    /// so a single instance buffer is safe here.
+    private var datagramBuf: Data
+
     // -----------------------------------------------------------------------
     // Initialisation
     // -----------------------------------------------------------------------
@@ -93,6 +99,11 @@ final class VideoTransport {
             socketFd = -1
             return nil
         }
+
+        // M13: Pre-allocate the reusable send buffer to header + max payload.
+        // This avoids one heap allocation per UDP fragment at runtime.
+        let maxDatagram = VideoTransport.VIDEO_HEADER_SIZE + VideoTransport.VIDEO_MAX_PAYLOAD
+        datagramBuf = Data(count: maxDatagram)
 
         print("SanskyStream VideoTransport: initialized. Target: \(windowsHost):\(VideoTransport.VIDEO_UDP_PORT)")
     }
@@ -135,29 +146,33 @@ final class VideoTransport {
             let payloadSize   = payloadSlice.count
 
             let datagramSize = headerSize + payloadSize
-            var datagram     = Data(count: datagramSize)
 
             let currentSeq = packetSeq
             packetSeq = packetSeq &+ 1
 
+            // M13: Write directly into the pre-allocated reusable buffer.
+            // Resize only when needed (datagramBuf capacity is always max-sized;
+            // count update is O(1) — no reallocation for smaller fragments).
+            datagramBuf.resetBytes(in: 0 ..< datagramSize)
+
             // Serialize header fields at their defined byte offsets.
-            datagram.writeU32LE(offset:  0, value: VideoTransport.VIDEO_MAGIC)
-            datagram.writeU8  (offset:  4, value: VideoTransport.VIDEO_PROTOCOL_VERSION)
-            datagram.writeU8  (offset:  5, value: VideoTransport.VIDEO_FRAGMENT_TYPE)
+            datagramBuf.writeU32LE(offset:  0, value: VideoTransport.VIDEO_MAGIC)
+            datagramBuf.writeU8  (offset:  4, value: VideoTransport.VIDEO_PROTOCOL_VERSION)
+            datagramBuf.writeU8  (offset:  5, value: VideoTransport.VIDEO_FRAGMENT_TYPE)
             let flags: UInt8 = isKeyframe ? VideoTransport.VIDEO_FLAG_KEYFRAME : 0
-            datagram.writeU8  (offset:  6, value: flags)
-            datagram.writeU32LE(offset:  7, value: currentFrameId)
-            datagram.writeU64LE(offset: 11, value: presentationUs)
-            datagram.writeU32LE(offset: 19, value: currentSeq)
-            datagram.writeU16LE(offset: 23, value: UInt16(fi))
-            datagram.writeU16LE(offset: 25, value: fragmentCount16)
-            datagram.writeU32LE(offset: 27, value: UInt32(payloadSize))
+            datagramBuf.writeU8  (offset:  6, value: flags)
+            datagramBuf.writeU32LE(offset:  7, value: currentFrameId)
+            datagramBuf.writeU64LE(offset: 11, value: presentationUs)
+            datagramBuf.writeU32LE(offset: 19, value: currentSeq)
+            datagramBuf.writeU16LE(offset: 23, value: UInt16(fi))
+            datagramBuf.writeU16LE(offset: 25, value: fragmentCount16)
+            datagramBuf.writeU32LE(offset: 27, value: UInt32(payloadSize))
 
-            // Copy payload.
-            datagram.replaceSubrange(headerSize ..< datagramSize, with: payloadSlice)
+            // Copy payload into the buffer.
+            datagramBuf.replaceSubrange(headerSize ..< datagramSize, with: payloadSlice)
 
-            // Send.
-            sendDatagram(datagram)
+            // Send (only the used portion).
+            sendDatagram(datagramBuf, count: datagramSize)
         }
     }
 
@@ -165,14 +180,14 @@ final class VideoTransport {
     // Private helpers
     // -----------------------------------------------------------------------
 
-    private func sendDatagram(_ data: Data) {
+    private func sendDatagram(_ data: Data, count: Int) {
         var addr = destAddr
         let sent = data.withUnsafeBytes { rawBuf -> Int in
             withUnsafeBytes(of: &addr) { addrBuf -> Int in
                 let addrPtr = addrBuf.baseAddress!.assumingMemoryBound(to: sockaddr.self)
                 return sendto(socketFd,
                               rawBuf.baseAddress,
-                              rawBuf.count,
+                              count,  // M13: send only 'count' bytes, not rawBuf.count (full capacity)
                               0,
                               addrPtr,
                               socklen_t(MemoryLayout<sockaddr_in>.size))

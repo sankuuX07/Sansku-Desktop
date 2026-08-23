@@ -482,11 +482,13 @@ void H264Decoder::DrainOutput(uint32_t frameId, uint64_t presentationUs)
         outBuf.dwStreamID = 0;
 
         // Allocate a sample+buffer if the MFT does not provide its own.
+        // M13: Use cached stream info (m_cachedStreamInfo) set in InitializeMFT()
+        // to avoid a per-frame COM query (GetOutputStreamInfo).
         ComPtr<IMFSample>      allocSample;
         ComPtr<IMFMediaBuffer> allocBuffer;
-        if (!mftProvidesSamples && streamInfo.cbSize > 0) {
+        if (!mftProvidesSamples && m_cachedStreamInfo.cbSize > 0) {
             MFCreateSample(&allocSample);
-            MFCreateMemoryBuffer(streamInfo.cbSize, &allocBuffer);
+            MFCreateMemoryBuffer(m_cachedStreamInfo.cbSize, &allocBuffer);
             if (allocSample && allocBuffer) {
                 allocSample->AddBuffer(allocBuffer.Get());
                 outBuf.pSample = allocSample.Get();
@@ -494,7 +496,7 @@ void H264Decoder::DrainOutput(uint32_t frameId, uint64_t presentationUs)
         }
 
         DWORD processStatus = 0;
-        hr = m_transform->ProcessOutput(0, 1, &outBuf, &processStatus);
+        HRESULT hr = m_transform->ProcessOutput(0, 1, &outBuf, &processStatus);
 
         // Release any MFT-generated events (usually null).
         if (outBuf.pEvents) {

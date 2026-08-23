@@ -332,7 +332,7 @@ void AACDecoder::DrainOutput(uint64_t timestampUs)
         }
 
         DWORD status = 0;
-        hr = m_transform->ProcessOutput(0, 1, &outBuf, &status);
+        HRESULT hr = m_transform->ProcessOutput(0, 1, &outBuf, &status);
 
         if (outBuf.pEvents) { outBuf.pEvents->Release(); outBuf.pEvents = nullptr; }
 
