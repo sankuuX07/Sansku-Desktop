@@ -9,9 +9,9 @@
 
 namespace SanskyStream {
 
-// Forward declaration — AVSynchronizer is an optional dependency.
-// Including the full header here would drag in windows.h through AVSynchronizer.h.
+// Forward declarations — optional dependencies kept as non-owning pointers.
 class AVSynchronizer;
+class OBSBridge;   // M14: OBS shared memory bridge
 
 // ---------------------------------------------------------------------------
 // VideoReceiver
@@ -53,6 +53,11 @@ public:
     // Pass nullptr to disable sync filtering (pre-M12 behaviour).
     void SetAVSync(AVSynchronizer* sync);
 
+    // Connect the OBS shared memory bridge (M14).
+    // When set, decoded frames are also pushed to the OBS plugin via IPC.
+    // Non-owning; pass nullptr to disable OBS integration.
+    void SetOBSBridge(OBSBridge* bridge);
+
     // M13: diagnostic counter getters (read from render thread via PipelineStats).
     // All counters are only written from the receive thread; reading from the
     // render thread is safe on x86/x64 (64-bit aligned loads are atomic).
@@ -75,6 +80,9 @@ private:
     // Non-owning pointer to the AVSynchronizer (owned by App).
     // Null until SetAVSync() is called (M12).
     AVSynchronizer* m_avSync = nullptr;
+
+    // Non-owning pointer to OBSBridge (owned by App). M14.
+    OBSBridge* m_obsBridge = nullptr;
 
     // M13: frame counters for periodic diagnostic logging.
     // Only accessed from the receive thread — no synchronisation needed.

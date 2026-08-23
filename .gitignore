@@ -1,0 +1,9 @@
+
+# OBS SDK — acquired via setup-obs-sdk.ps1 (not committed)
+windows/obs-sdk/libobs/
+windows/obs-sdk/bin/
+windows/obs-sdk/obs.lib
+windows/obs-sdk/obs.exp
+
+# OBS Plugin build output — not committed
+windows/obs-plugin/build/
