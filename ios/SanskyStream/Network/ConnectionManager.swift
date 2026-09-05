@@ -83,6 +83,26 @@ final class ConnectionManager: ObservableObject {
         nwConnection.start(queue: .global(qos: .userInitiated))
     }
 
+    // M16: Connect directly to a discovered NWEndpoint (e.g. from DeviceBrowser).
+    // The existing connect(host:portText:) path is unchanged; this is an
+    // additive convenience that avoids manual IP entry for discovered devices.
+    //
+    // - Parameter endpoint: An NWEndpoint resolved by DeviceBrowser.
+    func connect(to endpoint: NWEndpoint) {
+        connection?.cancel()
+        connection = nil
+        setStatus(.connecting)
+
+        let nwConnection = NWConnection(to: endpoint, using: .tcp)
+        nwConnection.stateUpdateHandler = { [weak self] state in
+            DispatchQueue.main.async {
+                self?.handleConnectionState(state)
+            }
+        }
+        connection = nwConnection
+        nwConnection.start(queue: .global(qos: .userInitiated))
+    }
+
     /// Cancel the active connection and return to the disconnected state.
     func disconnect() {
         connection?.cancel()

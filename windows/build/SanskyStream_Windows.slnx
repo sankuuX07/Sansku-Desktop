@@ -12,6 +12,7 @@
 		<BuildDependency Project="TestAVSync.vcxproj"/>
 		<BuildDependency Project="TestAudioPipeline.vcxproj"/>
 		<BuildDependency Project="TestDecoder.vcxproj"/>
+		<BuildDependency Project="TestDiscovery.vcxproj"/>
 		<BuildDependency Project="TestReceiver.vcxproj"/>
 		<BuildDependency Project="TestRenderPipeline.vcxproj"/>
 		<BuildDependency Project="TestVideoSender.vcxproj"/>
@@ -32,6 +33,9 @@
 		<BuildDependency Project="ZERO_CHECK.vcxproj"/>
 	</Project>
 	<Project Path="TestDecoder.vcxproj" Type="8bc9ceb8-8b4a-11d0-8d11-00a0c91bc942" Id="a6fc49f6-fb3a-34c6-96c1-ae442d221d28">
+		<BuildDependency Project="ZERO_CHECK.vcxproj"/>
+	</Project>
+	<Project Path="TestDiscovery.vcxproj" Type="8bc9ceb8-8b4a-11d0-8d11-00a0c91bc942" Id="df7f1f62-8b17-3133-be15-31288d38921b">
 		<BuildDependency Project="ZERO_CHECK.vcxproj"/>
 	</Project>
 	<Project Path="TestReceiver.vcxproj" Type="8bc9ceb8-8b4a-11d0-8d11-00a0c91bc942" Id="cec47474-8cd8-3239-9e8f-a476ed1361e6">

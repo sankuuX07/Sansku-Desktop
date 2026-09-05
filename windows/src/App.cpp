@@ -2,6 +2,9 @@
 #include "Logger.h"
 #include "Protocol.h"
 
+#include <mutex>   // std::lock_guard — for m_statusMutex
+#include <string>
+
 namespace SanskyStream {
 
 App::App() : m_isRunning(true) {
@@ -10,12 +13,33 @@ App::App() : m_isRunning(true) {
     // M13: pipeline diagnostics — constructed first, available to Run() loop.
     m_pipelineStats = std::make_unique<PipelineStats>();
 
+    // M16: initialise status strings so UpdateStatusOverlay() can be called at
+    // any time after construction.
+    m_networkStatus   = "Waiting for Device...";
+    m_discoveryStatus.clear();
+
     // -----------------------------------------------------------------------
     // M12: A/V Synchronizer — constructed first so all other components can
     // receive a raw pointer to it safely.  The synchronizer starts in the
     // unanchored state; the first decoded audio packet sets the clock anchor.
     // -----------------------------------------------------------------------
     m_avSync = std::make_unique<AVSynchronizer>();
+
+    // -----------------------------------------------------------------------
+    // M16: Device Discovery — start advertising this PC and browsing for
+    // iPhones running SanskyStream.  Non-fatal: if mDNS is unavailable,
+    // the existing manual connection still works.
+    // -----------------------------------------------------------------------
+    m_deviceDiscovery = std::make_unique<DeviceDiscovery>();
+    m_deviceDiscovery->SetDeviceFoundCallback([this](const DiscoveredDevice& dev) {
+        OnDeviceFound(dev);
+    });
+    m_deviceDiscovery->SetDeviceLostCallback([this](const std::string& name) {
+        OnDeviceLost(name);
+    });
+    if (!m_deviceDiscovery->Start()) {
+        LOG_WARN("App: DeviceDiscovery unavailable — manual IP entry still works.");
+    }
 
     // -----------------------------------------------------------------------
     // M14: OBS Bridge — creates the named shared memory segment that the
@@ -108,17 +132,16 @@ App::App() : m_isRunning(true) {
         OnAudioPacket(data, size);
     });
 
-    m_window->SetStatusText(
-        "SanskyStream\\r\\n\\r\\nWaiting for video...\\r\\n"
-        "Control: TCP :" + std::to_string(Protocol::CONTROL_TCP_PORT) +
-        "\\r\\nVideo:   UDP :" + std::to_string(Protocol::VIDEO_UDP_PORT));
+    // Initial status text via unified overlay helper.
+    UpdateStatusOverlay();
 
     if (!m_network->StartServer(Protocol::CONTROL_TCP_PORT)) {
         LOG_WARN("Network server failed to start. Running without networking.");
-        m_window->SetStatusText(
-            "SanskyStream\\r\\n\\r\\nNetwork Error\\r\\n"
-            "Control: TCP :" + std::to_string(Protocol::CONTROL_TCP_PORT) +
-            "\\r\\nVideo:   UDP :" + std::to_string(Protocol::VIDEO_UDP_PORT));
+        {
+            std::lock_guard<std::mutex> lk(m_statusMutex);
+            m_networkStatus = "Network Error";
+        }
+        UpdateStatusOverlay();
     }
 }
 
@@ -134,6 +157,10 @@ App::~App() {
     if (m_network) {
         m_network->StopServer();
     }
+    // M16: stop discovery before WinSock cleanup.
+    if (m_deviceDiscovery) {
+        m_deviceDiscovery->Stop();
+    }
     // m_avSync is destroyed last (it is the first member declared in App.h,
     // so it is destroyed last by C++ destruction order — correct).
     LOG_INFO("Application shutting down.");
@@ -148,11 +175,92 @@ void App::OnNetworkStatus(const std::string& status) {
         LOG_INFO("App: AVSynchronizer reset on client disconnect.");
     }
 
+    {
+        std::lock_guard<std::mutex> lk(m_statusMutex);
+        m_networkStatus = status;
+    }
+    UpdateStatusOverlay();
+}
+
+// ---------------------------------------------------------------------------
+// M16: Discovery event handlers
+// ---------------------------------------------------------------------------
+
+void App::OnDeviceFound(const DiscoveredDevice& device) {
+    // Build a discovery status line from all available devices.
+    const auto allDevices = m_deviceDiscovery->GetDevices();
+
+    std::string disc;
+    int senderCount = 0;
+    for (const auto& d : allDevices) {
+        if (d.state != DeviceState::Available) continue;
+        if (d.role == DeviceRole::Receiver) continue; // skip ourselves
+        ++senderCount;
+        disc += "\r\n  iPhone: " + d.displayName +
+                "  " + d.ipAddress + ":" + std::to_string(d.port) +
+                "  ver=" + std::to_string(d.protocolVersion);
+    }
+
+    {
+        std::lock_guard<std::mutex> lk(m_statusMutex);
+        if (senderCount > 0) {
+            m_discoveryStatus = "\r\n--- Discovered Devices ---" + disc;
+        } else {
+            m_discoveryStatus.clear();
+        }
+    }
+    UpdateStatusOverlay();
+
+    LOG_INFO("App: DeviceFound '" + device.displayName +
+             "' at " + device.ipAddress + ":" + std::to_string(device.port));
+}
+
+void App::OnDeviceLost(const std::string& displayName) {
+    // Rebuild discovery status from current available list (excluding lost device).
+    const auto allDevices = m_deviceDiscovery->GetDevices();
+
+    std::string disc;
+    int senderCount = 0;
+    for (const auto& d : allDevices) {
+        if (d.state != DeviceState::Available) continue;
+        if (d.role == DeviceRole::Receiver)   continue;
+        ++senderCount;
+        disc += "\r\n  iPhone: " + d.displayName +
+                "  " + d.ipAddress + ":" + std::to_string(d.port);
+    }
+
+    {
+        std::lock_guard<std::mutex> lk(m_statusMutex);
+        if (senderCount > 0) {
+            m_discoveryStatus = "\r\n--- Discovered Devices ---" + disc;
+        } else {
+            m_discoveryStatus.clear();
+        }
+    }
+    UpdateStatusOverlay();
+
+    LOG_INFO("App: DeviceLost '" + displayName + "'.");
+}
+
+// Combines m_networkStatus + m_discoveryStatus and pushes to the window.
+// Called from any thread; Window::SetStatusText is internally mutex-guarded.
+void App::UpdateStatusOverlay() {
+    std::string net;
+    std::string disc;
+    {
+        std::lock_guard<std::mutex> lk(m_statusMutex);
+        net  = m_networkStatus;
+        disc = m_discoveryStatus;
+    }
+
+    const std::string text =
+        "SanskyStream\r\n\r\nStatus: " + net +
+        "\r\nControl: TCP :" + std::to_string(Protocol::CONTROL_TCP_PORT) +
+        "\r\nVideo:   UDP :" + std::to_string(Protocol::VIDEO_UDP_PORT) +
+        disc;
+
     if (m_window) {
-        m_window->SetStatusText(
-            "SanskyStream\\r\\n\\r\\nStatus: " + status +
-            "\\r\\nControl: TCP :" + std::to_string(Protocol::CONTROL_TCP_PORT) +
-            "\\r\\nVideo:   UDP :" + std::to_string(Protocol::VIDEO_UDP_PORT));
+        m_window->SetStatusText(text);
     }
 }
 

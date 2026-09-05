@@ -11,5 +11,11 @@
 		<key>RPBroadcastProcessMode</key>
 		<string>RPBroadcastProcessModeSampleBuffer</string>
 	</dict>
+	<!-- M16: Declare the Bonjour service type so the system permits mDNS
+	     traffic from within the broadcast extension process.            -->
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_sanskystream._tcp</string>
+	</array>
 </dict>
 </plist>

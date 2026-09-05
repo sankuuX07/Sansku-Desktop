@@ -25,6 +25,7 @@ set(SOURCES
     src/Decoder.cpp
     src/Renderer.cpp
     src/OBSBridge.cpp            # M14: named shmem IPC bridge to OBS plugin
+    src/DeviceDiscovery.cpp      # M16: local-network mDNS/DNS-SD discovery
     src/Logger.cpp
 )
 
@@ -49,6 +50,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     mfuuid
     ws2_32
     ole32               # M11: required by WASAPI (CoInitializeEx, CoCreateInstance)
+    dnsapi              # M16: DnsServiceBrowse / DnsServiceRegister / DnsServiceResolve
 )
 
 # Compiler-specific options
@@ -242,6 +244,38 @@ target_link_libraries(TestAVSync PRIVATE
 if(MSVC)
     target_compile_options(TestAVSync PRIVATE /W4 /WX /EHsc)
     target_compile_definitions(TestAVSync PRIVATE
+        UNICODE _UNICODE WIN32_LEAN_AND_MEAN NOMINMAX)
+endif()
+
+# ---------------------------------------------------------------------------
+# TestDiscovery — M16 device discovery mock/controlled test harness.
+#
+# Tests DeviceDiscovery business logic without real mDNS or an iPhone.
+# All 13 required test scenarios from the M16 spec are covered.
+#
+# Usage:
+#   cmake --build . --config Release --target TestDiscovery
+#   .\Release\TestDiscovery.exe
+# ---------------------------------------------------------------------------
+add_executable(TestDiscovery
+    src/TestDiscovery.cpp
+    src/DeviceDiscovery.cpp
+    src/Logger.cpp
+)
+
+target_include_directories(TestDiscovery PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/../protocol
+)
+
+target_link_libraries(TestDiscovery PRIVATE
+    ws2_32
+    dnsapi
+)
+
+if(MSVC)
+    target_compile_options(TestDiscovery PRIVATE /W4 /WX /EHsc)
+    target_compile_definitions(TestDiscovery PRIVATE
         UNICODE _UNICODE WIN32_LEAN_AND_MEAN NOMINMAX)
 endif()
 

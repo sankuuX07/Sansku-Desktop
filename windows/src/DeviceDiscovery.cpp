@@ -202,8 +202,8 @@ bool DeviceDiscovery::StartRegistration() {
         port,
         0, 0,                     // priority, weight
         2,                        // TXT property count
-        const_cast<PWSTR*>(kKeys),
-        const_cast<PWSTR*>(kValues)
+        kKeys,
+        kValues
     );
     if (!m_serviceInstance) {
         LOG_WARN("DeviceDiscovery: DnsServiceConstructInstance failed.");
@@ -331,11 +331,11 @@ void DeviceDiscovery::ResolveInstance(const std::wstring& instanceName) {
     auto* ctx = new ResolveCtx{ this, instanceName, {} };
 
     DNS_SERVICE_RESOLVE_REQUEST req = {};
-    req.Version          = DNS_QUERY_REQUEST_VERSION1;
-    req.InterfaceIndex   = 0;
-    req.QueryName        = const_cast<PWSTR>(ctx->instanceName.c_str());
-    req.pResolveCallback = ResolveCallback;
-    req.pQueryContext    = ctx;
+    req.Version                         = DNS_QUERY_REQUEST_VERSION1;
+    req.InterfaceIndex                  = 0;
+    req.QueryName                       = const_cast<PWSTR>(ctx->instanceName.c_str());
+    req.pResolveCompletionCallback      = ResolveCallback;
+    req.pQueryContext                   = ctx;
 
     const DNS_STATUS st = DnsServiceResolve(&req, &ctx->cancel);
     if (st != DNS_REQUEST_PENDING && st != ERROR_SUCCESS) {

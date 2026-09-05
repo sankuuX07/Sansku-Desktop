@@ -11,6 +11,8 @@
 		AABBCC00000000000000000D /* ConnectionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AABBCC00000000000000000A /* ConnectionManager.swift */; };
 		AABBCC00000000000000000E /* ConnectView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AABBCC00000000000000000B /* ConnectView.swift */; };
 		AABBCC00000000000000001A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AABBCC000000000000000019 /* Assets.xcassets */; };
+		AABBCC00000000000000001F /* ServiceAdvertiser.swift in Sources */ = {isa = PBXBuildFile; fileRef = AABBCC00000000000000001B /* ServiceAdvertiser.swift */; };
+		AABBCC000000000000000020 /* DeviceBrowser.swift in Sources */ = {isa = PBXBuildFile; fileRef = AABBCC00000000000000001C /* DeviceBrowser.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -19,6 +21,8 @@
 		AABBCC00000000000000000A /* ConnectionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionManager.swift; sourceTree = "<group>"; };
 		AABBCC00000000000000000B /* ConnectView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectView.swift; sourceTree = "<group>"; };
 		AABBCC000000000000000019 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		AABBCC00000000000000001B /* ServiceAdvertiser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceAdvertiser.swift; sourceTree = "<group>"; };
+		AABBCC00000000000000001C /* DeviceBrowser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceBrowser.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -71,6 +75,8 @@
 			isa = PBXGroup;
 			children = (
 				AABBCC00000000000000000A /* ConnectionManager.swift */,
+				AABBCC00000000000000001B /* ServiceAdvertiser.swift */,
+				AABBCC00000000000000001C /* DeviceBrowser.swift */,
 			);
 			path = Network;
 			sourceTree = "<group>";
@@ -155,6 +161,8 @@
 				AABBCC00000000000000000C /* SanskyStreamApp.swift in Sources */,
 				AABBCC00000000000000000D /* ConnectionManager.swift in Sources */,
 				AABBCC00000000000000000E /* ConnectView.swift in Sources */,
+				AABBCC00000000000000001F /* ServiceAdvertiser.swift in Sources */,
+				AABBCC000000000000000020 /* DeviceBrowser.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -280,6 +288,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSBonjourServices = "_sanskystream._tcp";
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "SanskyStream needs local network access to connect to your Windows PC.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -306,6 +315,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSBonjourServices = "_sanskystream._tcp";
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "SanskyStream needs local network access to connect to your Windows PC.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;

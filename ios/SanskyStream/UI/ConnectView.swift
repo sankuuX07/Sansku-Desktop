@@ -2,11 +2,18 @@ import SwiftUI
 
 /// Main screen of the SanskyStream iPhone app.
 ///
-/// Presents IP/port inputs, a Connect/Disconnect button, and a live status indicator.
+/// Presents:
+///   - M16 Discovered Devices section (auto-filled from DeviceBrowser)
+///   - Manual IP/port inputs (unchanged from pre-M16)
+///   - Connect/Disconnect button
+///   - Live status indicator
+///   - Screen Capture picker
+///
 /// Requires iOS 16 (NavigationStack, LabeledContent).
 struct ConnectView: View {
 
     @StateObject private var connectionManager = ConnectionManager()
+    @StateObject private var deviceBrowser     = DeviceBrowser()   // M16
 
     @State private var ipAddress: String = ""
     @State private var portText:  String = "5000"
@@ -14,6 +21,42 @@ struct ConnectView: View {
     var body: some View {
         NavigationStack {
             Form {
+
+                // ── M16: Discovered Devices ───────────────────────────────
+                // Shows Windows PCs found automatically on the local network.
+                // Tapping a device connects immediately using the resolved
+                // NWEndpoint — no manual IP entry required.
+                if !deviceBrowser.receivers.isEmpty {
+                    Section {
+                        ForEach(deviceBrowser.receivers) { receiver in
+                            Button {
+                                connectionManager.connect(to: receiver.endpoint)
+                            } label: {
+                                HStack(spacing: 12) {
+                                    Image(systemName: "display")
+                                        .foregroundStyle(.blue)
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(receiver.displayName)
+                                            .font(.headline)
+                                        Text("SanskyStream  ·  ver \(receiver.protocolVersion)")
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                    Spacer()
+                                    Image(systemName: "chevron.right")
+                                        .foregroundStyle(.secondary)
+                                }
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    } header: {
+                        Label("Discovered on Wi-Fi", systemImage: "network")
+                    } footer: {
+                        Text("Tap a device to connect automatically.")
+                            .font(.caption)
+                    }
+                }
 
                 // ── Windows PC configuration ──────────────────────────────
                 Section {
@@ -31,9 +74,9 @@ struct ConnectView: View {
                             .multilineTextAlignment(.trailing)
                     }
                 } header: {
-                    Text("Windows PC")
+                    Text("Windows PC (Manual)")
                 } footer: {
-                    Text("Enter the local IPv4 address of your Windows PC.")
+                    Text("Enter the local IPv4 address of your Windows PC, or tap a discovered device above.")
                         .font(.caption)
                 }
 
@@ -95,6 +138,8 @@ struct ConnectView: View {
                 }
             }
             .navigationTitle("SanskyStream")
+            .onAppear  { deviceBrowser.start() }   // M16: start browsing
+            .onDisappear { /* keep browsing while app is in foreground */ }
         }
     }
 
