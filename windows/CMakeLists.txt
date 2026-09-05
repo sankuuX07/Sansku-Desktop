@@ -90,6 +90,7 @@ add_executable(TestReceiver
     src/VideoFrameQueue.cpp
     src/H264Decoder.cpp
     src/AVSynchronizer.cpp       # M12: VideoReceiver now calls CheckVideoFrame()
+    src/OBSBridge.cpp            # M14: VideoReceiver now calls OBSBridge::PushVideoFrame()
     src/Logger.cpp
 )
 
@@ -121,6 +122,7 @@ add_executable(TestDecoder
     src/VideoFrameQueue.cpp
     src/FrameAssembler.cpp
     src/AVSynchronizer.cpp       # M12: VideoReceiver now calls CheckVideoFrame()
+    src/OBSBridge.cpp            # M14: VideoReceiver now calls OBSBridge::PushVideoFrame()
     src/Logger.cpp
 )
 
@@ -189,6 +191,7 @@ add_executable(TestAudioPipeline
     src/AudioPlayer.cpp
     src/AudioReceiver.cpp
     src/AVSynchronizer.cpp       # M12: AudioReceiver now calls NotifyAudioTimestamp()
+    src/OBSBridge.cpp            # M14: AudioReceiver now calls OBSBridge::PushAudioData()
     src/Logger.cpp
 )
 
