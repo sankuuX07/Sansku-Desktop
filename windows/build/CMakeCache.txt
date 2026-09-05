@@ -20,6 +20,11 @@ BUILD_OBS_PLUGIN:BOOL=ON
 //Path to a program.
 CMAKE_AR:FILEPATH=C:/Program Files/Microsoft Visual Studio/18/Community/VC/Tools/MSVC/14.51.36231/bin/Hostx64/x64/lib.exe
 
+//Build type for single-configuration generators (Makefile Generators,
+// Ninja, etc.). Typical values: Debug, Release, RelWithDebInfo,
+// MinSizeRel; custom build types may also be defined.
+CMAKE_BUILD_TYPE:UNINITIALIZED=Release
+
 //Semicolon separated list of supported configuration types, only
 // supports Debug, Release, MinSizeRel, and RelWithDebInfo, anything
 // else will be ignored.
