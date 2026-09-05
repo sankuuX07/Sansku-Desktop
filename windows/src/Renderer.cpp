@@ -2,6 +2,7 @@
 #include "AVSynchronizer.h"
 #include "Logger.h"
 
+#include <algorithm>
 #include <d3dcompiler.h>
 #include <cstdio>
 #include <cstring>
@@ -277,6 +278,14 @@ void Renderer::SetAVSync(AVSynchronizer* sync) {
 }
 
 // ---------------------------------------------------------------------------
+// SetPanelHeight (M17)
+// ---------------------------------------------------------------------------
+
+void Renderer::SetPanelHeight(int panelHeight) {
+    m_panelHeight = (panelHeight > 0) ? panelHeight : 0;
+}
+
+// ---------------------------------------------------------------------------
 // ClearColor  (legacy public helper — kept for API compatibility)
 // ---------------------------------------------------------------------------
 
@@ -325,15 +334,18 @@ void Renderer::Render() {
     }
 
     // -----------------------------------------------------------------------
-    // 4. Draw video quad (letterbox viewport, NV12->RGB shader)
+    // 4. Draw video quad (letterbox viewport inside the VIDEO area only).
+    //    The video area height = window height − m_panelHeight.
     // -----------------------------------------------------------------------
     if (m_hasVideo && m_srvY && m_srvUV &&
         m_vertexShader && m_pixelShader && m_renderTargetView)
     {
         const float wndW = (m_window && m_window->GetWidth()  > 0)
                            ? static_cast<float>(m_window->GetWidth())  : 1.0f;
-        const float wndH = (m_window && m_window->GetHeight() > 0)
-                           ? static_cast<float>(m_window->GetHeight()) : 1.0f;
+        const float totalH = (m_window && m_window->GetHeight() > 0)
+                             ? static_cast<float>(m_window->GetHeight()) : 1.0f;
+        // Subtract panel height so video never draws into the panel strip.
+        const float wndH = std::max(1.0f, totalH - static_cast<float>(m_panelHeight));
 
         D3D11_VIEWPORT vp = ComputeLetterbox(
             static_cast<float>(m_videoWidth),
@@ -352,7 +364,6 @@ void Renderer::Render() {
         ID3D11SamplerState* samplers[1] = {m_sampler.Get()};
         m_context->PSSetSamplers(0, 1, samplers);
 
-        // SV_VertexID quad: no vertex buffer, no input layout
         m_context->IASetInputLayout(nullptr);
         m_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
@@ -364,7 +375,8 @@ void Renderer::Render() {
     }
 
     // -----------------------------------------------------------------------
-    // 5. FPS measurement — update status overlay at ~1 Hz
+    // 5. FPS measurement — update m_fps at ~1 Hz (App reads this via GetFPS()).
+    //    M17: App owns all status text; Renderer only measures FPS.
     // -----------------------------------------------------------------------
     m_fpsFrameCount++;
     LARGE_INTEGER now;
@@ -373,37 +385,10 @@ void Renderer::Render() {
         static_cast<float>(now.QuadPart - m_fpsLastTime.QuadPart) /
         static_cast<float>(m_perfFreq.QuadPart);
 
-    if (elapsed >= 1.0f && m_window) {
+    if (elapsed >= 1.0f) {
         m_fps           = static_cast<float>(m_fpsFrameCount) / elapsed;
         m_fpsFrameCount = 0;
         m_fpsLastTime   = now;
-
-        std::string status = "SanskyStream\r\n\r\n";
-        if (m_hasVideo) {
-            char buf[64];
-            snprintf(buf, sizeof(buf), "FPS: %.1f  |  %ux%u",
-                     static_cast<double>(m_fps),
-                     static_cast<unsigned>(m_videoWidth),
-                     static_cast<unsigned>(m_videoHeight));
-            status += buf;
-        } else {
-            status += "Waiting for video...";
-        }
-
-        // M12: append lightweight A/V sync diagnostics (~1 Hz, zero per-frame cost).
-        if (m_avSync) {
-            const SyncStats s = m_avSync->GetStats();
-            char syncBuf[128];
-            const double avMs = static_cast<double>(s.avDiffUs) / 1000.0;
-            snprintf(syncBuf, sizeof(syncBuf),
-                     "\r\nA/V: %+.0f ms | Drop: %llu | %s",
-                     avMs,
-                     static_cast<unsigned long long>(s.droppedFrames),
-                     s.isAnchored ? "Synced" : "Unsynced");
-            status += syncBuf;
-        }
-
-        m_window->SetStatusText(status);
     }
 
     // -----------------------------------------------------------------------

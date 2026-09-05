@@ -52,6 +52,11 @@ public:
     // Pass nullptr to disable (pre-M12 behaviour).
     void SetAVSync(AVSynchronizer* sync);
 
+    // M17: Tell the renderer how many pixels at the bottom of the client rect
+    // are occupied by the UI panel, so the letterbox viewport does not draw
+    // over child controls.  Call once after Initialize(), before Render().
+    void SetPanelHeight(int panelHeight);
+
     // Handle a window resize event.
     // Called automatically inside Render() via Window::TakeResizePending().
     // May also be called externally if needed.
@@ -134,6 +139,10 @@ private:
     LARGE_INTEGER m_fpsLastTime   = {};
     uint32_t      m_fpsFrameCount = 0;
     float         m_fps           = 0.0f;
+
+    // M17: pixels reserved for the UI panel at the bottom of the window.
+    // The video letterbox viewport is computed against (height - m_panelHeight).
+    int           m_panelHeight   = 0;
 };
 
 } // namespace SanskyStream

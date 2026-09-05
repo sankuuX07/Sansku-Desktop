@@ -1,34 +1,48 @@
+// ---------------------------------------------------------------------------
+// App.cpp — M17: Application, wiring UI panel to pipeline
+//
+// What changed in M17:
+//   - Window::SetUICallbacks() wires button/list events to App methods.
+//   - OnDeviceFound / OnDeviceLost call Window::UpdateDeviceList().
+//   - OnConnectClicked / OnDisconnectClicked manage the Network server.
+//   - OnManualConnect() allows manual IP/port override.
+//   - UpdateStreamStatsIfDue() pushes pipeline stats to the window ~500 ms.
+//   - Renderer::SetPanelHeight() reduces the video viewport by kPanelHeight.
+//   - Renderer no longer owns SetStatusText; App owns all status updates.
+// ---------------------------------------------------------------------------
+
 #include "App.h"
 #include "Logger.h"
 #include "Protocol.h"
 
-#include <mutex>   // std::lock_guard — for m_statusMutex
+#include <algorithm>
+#include <mutex>
 #include <string>
 
 namespace SanskyStream {
 
-App::App() : m_isRunning(true) {
-    LOG_INFO("Initializing Application...");
+// ---------------------------------------------------------------------------
+// Construction
+// ---------------------------------------------------------------------------
 
-    // M13: pipeline diagnostics — constructed first, available to Run() loop.
+App::App() : m_isRunning(true) {
+    LOG_INFO("Initializing Application (M17)...");
+
+    QueryPerformanceFrequency(&m_statsFreq);
+    QueryPerformanceCounter(&m_statsLastUpdate);
+
+    // M13: pipeline diagnostics.
     m_pipelineStats = std::make_unique<PipelineStats>();
 
-    // M16: initialise status strings so UpdateStatusOverlay() can be called at
-    // any time after construction.
+    // M17: initial status strings.
     m_networkStatus   = "Waiting for Device...";
     m_discoveryStatus.clear();
 
-    // -----------------------------------------------------------------------
-    // M12: A/V Synchronizer — constructed first so all other components can
-    // receive a raw pointer to it safely.  The synchronizer starts in the
-    // unanchored state; the first decoded audio packet sets the clock anchor.
-    // -----------------------------------------------------------------------
+    // M12: A/V synchronizer — first so other components can hold a raw ptr.
     m_avSync = std::make_unique<AVSynchronizer>();
 
     // -----------------------------------------------------------------------
-    // M16: Device Discovery — start advertising this PC and browsing for
-    // iPhones running SanskyStream.  Non-fatal: if mDNS is unavailable,
-    // the existing manual connection still works.
+    // M16: Device discovery.
     // -----------------------------------------------------------------------
     m_deviceDiscovery = std::make_unique<DeviceDiscovery>();
     m_deviceDiscovery->SetDeviceFoundCallback([this](const DiscoveredDevice& dev) {
@@ -42,11 +56,7 @@ App::App() : m_isRunning(true) {
     }
 
     // -----------------------------------------------------------------------
-    // M14: OBS Bridge — creates the named shared memory segment that the
-    // OBS plugin (sansky-source.dll) reads.  Non-fatal: if OBS is not
-    // installed or CreateFileMapping fails, the pipeline continues normally.
-    // Must be constructed before VideoReceiver and AudioReceiver so it is
-    // valid when those components call SetOBSBridge().
+    // M14: OBS Bridge.
     // -----------------------------------------------------------------------
     m_obsBridge = std::make_unique<OBSBridge>();
     if (m_obsBridge->IsReady()) {
@@ -56,46 +66,58 @@ App::App() : m_isRunning(true) {
     }
 
     // -----------------------------------------------------------------------
-    // Window
+    // Window (M17: 1280×720 + kPanelHeight for the UI panel).
+    // The total window height already includes the panel; the Renderer will
+    // be told to use only the top (height − kPanelHeight) rows for video.
     // -----------------------------------------------------------------------
-    m_window = std::make_unique<Window>(1280, 720, L"SanskyStream Client");
+    m_window = std::make_unique<Window>(1280, 720 + Window::kPanelHeight,
+                                        L"SanskyStream");
     if (!m_window->GetHWND()) {
         LOG_ERROR("Failed to initialize main window.");
         m_isRunning = false;
         return;
     }
 
+    // Wire UI callbacks (all fire on main thread via WM_COMMAND).
+    {
+        UICallbacks cb;
+        cb.onDeviceSelected  = [this](int idx) { OnDeviceSelected(idx); };
+        cb.onConnectClicked  = [this]()         { OnConnectClicked();   };
+        cb.onDisconnectClicked = [this]()       { OnDisconnectClicked(); };
+        cb.onManualConnect   = [this](const std::string& ip,
+                                     const std::string& port) {
+            OnManualConnect(ip, port);
+        };
+        m_window->SetUICallbacks(std::move(cb));
+    }
+
+    // Set initial connection state so buttons are correctly enabled.
+    m_window->UpdateConnectionState(ConnectionState::Discovering);
+
     // -----------------------------------------------------------------------
-    // Renderer (D3D11 swap chain + NV12 shaders — M8)
+    // Renderer (D3D11, M8).
+    // Pass panel height so the letterbox viewport stays in the video area.
     // -----------------------------------------------------------------------
     m_renderer = std::make_unique<Renderer>(m_window.get());
+    m_renderer->SetPanelHeight(Window::kPanelHeight);
     if (!m_renderer->Initialize()) {
         LOG_ERROR("Failed to initialize renderer.");
         m_isRunning = false;
         return;
     }
-    // M12: give the renderer a non-owning pointer so it can display sync stats.
-    m_renderer->SetAVSync(m_avSync.get());
+    m_renderer->SetAVSync(m_avSync.get()); // M12
 
     // -----------------------------------------------------------------------
-    // VideoFrameQueue — single-slot latest-frame store shared between
-    // VideoReceiver (receive thread producer) and Renderer (main thread consumer).
+    // Video pipeline.
     // -----------------------------------------------------------------------
     m_frameQueue = std::make_unique<VideoFrameQueue>();
 
-    // -----------------------------------------------------------------------
-    // VideoReceiver — owns H264Decoder (M7); decoded frames go to the queue.
-    // M12: wire AVSynchronizer so stale frames are dropped before enqueuing.
-    // -----------------------------------------------------------------------
     m_videoReceiver = std::make_unique<VideoReceiver>();
     m_videoReceiver->SetFrameQueue(m_frameQueue.get());
-    m_videoReceiver->SetAVSync(m_avSync.get());   // M12
-    m_videoReceiver->SetOBSBridge(m_obsBridge.get()); // M14: forward decoded frames to OBS shmem
+    m_videoReceiver->SetAVSync(m_avSync.get());
+    m_videoReceiver->SetOBSBridge(m_obsBridge.get());
     m_renderer->SetFrameQueue(m_frameQueue.get());
 
-    // -----------------------------------------------------------------------
-    // VideoUdpReceiver — binds UDP port 5001.
-    // -----------------------------------------------------------------------
     m_videoUdpReceiver = std::make_unique<VideoUdpReceiver>(
         [this](CompleteFrame frame) {
             m_videoReceiver->OnCompleteFrame(std::move(frame));
@@ -106,16 +128,14 @@ App::App() : m_isRunning(true) {
     }
 
     // -----------------------------------------------------------------------
-    // AudioReceiver — M11: AAC decoder + WASAPI playback.
-    // M12: wire AVSynchronizer so decoded audio timestamps anchor the clock.
+    // Audio pipeline (M11).
     // -----------------------------------------------------------------------
     m_audioReceiver = std::make_unique<AudioReceiver>();
-    m_audioReceiver->SetAVSync(m_avSync.get());        // M12 — must be set before Start()
-    m_audioReceiver->SetOBSBridge(m_obsBridge.get()); // M14: forward decoded PCM to OBS shmem
+    m_audioReceiver->SetAVSync(m_avSync.get());
+    m_audioReceiver->SetOBSBridge(m_obsBridge.get());
     if (!m_audioReceiver->Start(Protocol::AUDIO_DEFAULT_SAMPLE_RATE,
                                 Protocol::AUDIO_DEFAULT_CHANNELS)) {
         LOG_WARN("AudioReceiver failed to start. Audio playback disabled.");
-        // Non-fatal: video pipeline continues.
         m_audioReceiver.reset();
     }
 
@@ -126,154 +146,45 @@ App::App() : m_isRunning(true) {
     m_network->SetStatusCallback([this](const std::string& status) {
         OnNetworkStatus(status);
     });
-
-    // M11: wire audio packet dispatch.
     m_network->SetAudioPacketCallback([this](const uint8_t* data, size_t size) {
         OnAudioPacket(data, size);
     });
 
-    // Initial status text via unified overlay helper.
-    UpdateStatusOverlay();
-
     if (!m_network->StartServer(Protocol::CONTROL_TCP_PORT)) {
         LOG_WARN("Network server failed to start. Running without networking.");
-        {
-            std::lock_guard<std::mutex> lk(m_statusMutex);
-            m_networkStatus = "Network Error";
-        }
-        UpdateStatusOverlay();
+        m_window->UpdateConnectionState(ConnectionState::Error,
+                                        "Network unavailable — check firewall");
     }
+
+    // Push initial stream stats to the stat bar.
+    {
+        StreamStats s;
+        s.audioOk  = (m_audioReceiver != nullptr);
+        s.obsReady = (m_obsBridge && m_obsBridge->IsReady());
+        m_window->UpdateStreamStats(s);
+    }
+
+    LOG_INFO("App initialisation complete.");
 }
 
+// ---------------------------------------------------------------------------
+// Destruction
+// ---------------------------------------------------------------------------
+
 App::~App() {
-    // Stop audio first so the decode/playback threads shut down cleanly
-    // before the network thread is stopped.
-    if (m_audioReceiver) {
-        m_audioReceiver->Stop();
-    }
-    if (m_videoUdpReceiver) {
-        m_videoUdpReceiver->Stop();
-    }
-    if (m_network) {
-        m_network->StopServer();
-    }
-    // M16: stop discovery before WinSock cleanup.
-    if (m_deviceDiscovery) {
-        m_deviceDiscovery->Stop();
-    }
-    // m_avSync is destroyed last (it is the first member declared in App.h,
-    // so it is destroyed last by C++ destruction order — correct).
+    if (m_audioReceiver)     m_audioReceiver->Stop();
+    if (m_videoUdpReceiver)  m_videoUdpReceiver->Stop();
+    if (m_network)           m_network->StopServer();
+    if (m_deviceDiscovery)   m_deviceDiscovery->Stop();
     LOG_INFO("Application shutting down.");
 }
 
-// Called from the network thread — only updates window state (fast).
-void App::OnNetworkStatus(const std::string& status) {
-    // M12: reset the synchronizer on disconnect so stale timestamps from the
-    // previous stream do not corrupt the next connection.
-    if (status == "Waiting for Device..." && m_avSync) {
-        m_avSync->Reset();
-        LOG_INFO("App: AVSynchronizer reset on client disconnect.");
-    }
-
-    {
-        std::lock_guard<std::mutex> lk(m_statusMutex);
-        m_networkStatus = status;
-    }
-    UpdateStatusOverlay();
-}
-
 // ---------------------------------------------------------------------------
-// M16: Discovery event handlers
+// Run — main loop
 // ---------------------------------------------------------------------------
-
-void App::OnDeviceFound(const DiscoveredDevice& device) {
-    // Build a discovery status line from all available devices.
-    const auto allDevices = m_deviceDiscovery->GetDevices();
-
-    std::string disc;
-    int senderCount = 0;
-    for (const auto& d : allDevices) {
-        if (d.state != DeviceState::Available) continue;
-        if (d.role == DeviceRole::Receiver) continue; // skip ourselves
-        ++senderCount;
-        disc += "\r\n  iPhone: " + d.displayName +
-                "  " + d.ipAddress + ":" + std::to_string(d.port) +
-                "  ver=" + std::to_string(d.protocolVersion);
-    }
-
-    {
-        std::lock_guard<std::mutex> lk(m_statusMutex);
-        if (senderCount > 0) {
-            m_discoveryStatus = "\r\n--- Discovered Devices ---" + disc;
-        } else {
-            m_discoveryStatus.clear();
-        }
-    }
-    UpdateStatusOverlay();
-
-    LOG_INFO("App: DeviceFound '" + device.displayName +
-             "' at " + device.ipAddress + ":" + std::to_string(device.port));
-}
-
-void App::OnDeviceLost(const std::string& displayName) {
-    // Rebuild discovery status from current available list (excluding lost device).
-    const auto allDevices = m_deviceDiscovery->GetDevices();
-
-    std::string disc;
-    int senderCount = 0;
-    for (const auto& d : allDevices) {
-        if (d.state != DeviceState::Available) continue;
-        if (d.role == DeviceRole::Receiver)   continue;
-        ++senderCount;
-        disc += "\r\n  iPhone: " + d.displayName +
-                "  " + d.ipAddress + ":" + std::to_string(d.port);
-    }
-
-    {
-        std::lock_guard<std::mutex> lk(m_statusMutex);
-        if (senderCount > 0) {
-            m_discoveryStatus = "\r\n--- Discovered Devices ---" + disc;
-        } else {
-            m_discoveryStatus.clear();
-        }
-    }
-    UpdateStatusOverlay();
-
-    LOG_INFO("App: DeviceLost '" + displayName + "'.");
-}
-
-// Combines m_networkStatus + m_discoveryStatus and pushes to the window.
-// Called from any thread; Window::SetStatusText is internally mutex-guarded.
-void App::UpdateStatusOverlay() {
-    std::string net;
-    std::string disc;
-    {
-        std::lock_guard<std::mutex> lk(m_statusMutex);
-        net  = m_networkStatus;
-        disc = m_discoveryStatus;
-    }
-
-    const std::string text =
-        "SanskyStream\r\n\r\nStatus: " + net +
-        "\r\nControl: TCP :" + std::to_string(Protocol::CONTROL_TCP_PORT) +
-        "\r\nVideo:   UDP :" + std::to_string(Protocol::VIDEO_UDP_PORT) +
-        disc;
-
-    if (m_window) {
-        m_window->SetStatusText(text);
-    }
-}
-
-// Called from the network thread when an audio packet arrives.
-void App::OnAudioPacket(const uint8_t* payload, size_t size) {
-    if (m_audioReceiver) {
-        m_audioReceiver->OnAudioPacketReceived(payload, size);
-    }
-}
 
 void App::Run() {
     if (!m_isRunning) return;
-
     LOG_INFO("Application entering main loop.");
 
     while (m_isRunning) {
@@ -285,8 +196,7 @@ void App::Run() {
         m_renderer->Render();
         m_window->DrawStatusOverlay();
 
-        // M13: periodic pipeline diagnostics — builds snapshot and logs every 5 s.
-        // Zero overhead between reports (QPC guard in PipelineStats::Report).
+        // M13: periodic pipeline diagnostics (every 5 s, log only).
         if (m_pipelineStats) {
             PipelineStatsSnapshot snap;
             if (m_videoReceiver) {
@@ -308,7 +218,239 @@ void App::Run() {
             snap.renderFps = m_renderer ? m_renderer->GetFPS() : 0.0f;
             m_pipelineStats->Report(snap);
         }
+
+        // M17: update stat bar ~every 500 ms.
+        UpdateStreamStatsIfDue();
     }
+}
+
+// ---------------------------------------------------------------------------
+// UpdateStreamStatsIfDue — throttled at ~500 ms
+// ---------------------------------------------------------------------------
+
+void App::UpdateStreamStatsIfDue() {
+    if (!m_window) return;
+
+    LARGE_INTEGER now;
+    QueryPerformanceCounter(&now);
+    const int64_t elapsedMs = (m_statsFreq.QuadPart > 0)
+        ? ((now.QuadPart - m_statsLastUpdate.QuadPart) * 1000LL) /
+           m_statsFreq.QuadPart
+        : 1000LL;
+
+    if (elapsedMs < 500) return;
+    m_statsLastUpdate = now;
+
+    StreamStats s;
+    s.fps           = m_renderer ? m_renderer->GetFPS()      : 0.0f;
+    s.videoWidth    = m_renderer ? m_renderer->VideoWidth()  : 0;
+    s.videoHeight   = m_renderer ? m_renderer->VideoHeight() : 0;
+    s.hasVideo      = m_renderer && m_renderer->HasVideo();
+    s.audioOk       = (m_audioReceiver != nullptr);
+    s.obsReady      = (m_obsBridge && m_obsBridge->IsReady());
+    s.framesDropped = m_videoReceiver ? m_videoReceiver->GetFramesDropped() : 0;
+
+    if (m_avSync) {
+        const SyncStats ss = m_avSync->GetStats();
+        s.avDiffMs   = ss.avDiffUs / 1000LL;
+        s.avAnchored = ss.isAnchored;
+    }
+
+    m_window->UpdateStreamStats(s);
+}
+
+// ---------------------------------------------------------------------------
+// OnNetworkStatus — called from the network thread
+// ---------------------------------------------------------------------------
+
+void App::OnNetworkStatus(const std::string& status) {
+    // M12: reset AVSync on disconnect.
+    if (status == "Waiting for Device..." && m_avSync) {
+        m_avSync->Reset();
+        LOG_INFO("App: AVSynchronizer reset on client disconnect.");
+    }
+
+    // Update the connection state.
+    if (status == "Connected") {
+        m_connState = ConnectionState::Connected;
+    } else {
+        // Back to Idle unless we're already in Error.
+        if (m_connState != ConnectionState::Error)
+            m_connState = ConnectionState::Idle;
+    }
+
+    {
+        std::lock_guard<std::mutex> lk(m_statusMutex);
+        m_networkStatus = status;
+    }
+
+    // UpdateConnectionState must be called on the main thread.
+    // Network callbacks fire from the server thread, so post a message.
+    if (m_window && m_window->GetHWND()) {
+        // We use the connection state already set above; just invalidate the
+        // window so DrawStatusOverlay fires on the next Render() iteration.
+        // The actual UpdateConnectionState is called from PushConnectionState()
+        // which runs from the main thread in UpdateStreamStatsIfDue.
+        // Use PostMessage(WM_NULL) as a lightweight wake-up signal.
+        PostMessage(m_window->GetHWND(), WM_NULL, 0, 0);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// PushConnectionState — called from main thread to sync UI buttons/label.
+// ---------------------------------------------------------------------------
+
+void App::PushConnectionState() {
+    if (!m_window) return;
+    std::string detail;
+    {
+        std::lock_guard<std::mutex> lk(m_statusMutex);
+        detail = m_networkStatus;
+    }
+    m_window->UpdateConnectionState(m_connState, detail);
+}
+
+// ---------------------------------------------------------------------------
+// OnAudioPacket — called from network thread
+// ---------------------------------------------------------------------------
+
+void App::OnAudioPacket(const uint8_t* payload, size_t size) {
+    if (m_audioReceiver)
+        m_audioReceiver->OnAudioPacketReceived(payload, size);
+}
+
+// ---------------------------------------------------------------------------
+// M16 Discovery callbacks
+// ---------------------------------------------------------------------------
+
+void App::OnDeviceFound(const DiscoveredDevice& device) {
+    LOG_INFO("App: DeviceFound '" + device.displayName +
+             "' at " + device.ipAddress + ":" + std::to_string(device.port));
+
+    // Rebuild visible device list from the current snapshot.
+    const auto all = m_deviceDiscovery->GetDevices();
+    m_visibleDevices.clear();
+    for (const auto& d : all) {
+        if (d.state != DeviceState::Available) continue;
+        if (d.role  == DeviceRole::Receiver)   continue;
+        m_visibleDevices.push_back(d);
+    }
+
+    // Clamp selected index.
+    if (m_selectedDeviceIndex >= static_cast<int>(m_visibleDevices.size()))
+        m_selectedDeviceIndex = -1;
+
+    if (m_window) {
+        m_window->UpdateDeviceList(m_visibleDevices);
+        // Transition to Discovering if we were Idle, so the user knows
+        // something appeared.
+        if (m_connState == ConnectionState::Idle)
+            m_connState = ConnectionState::Discovering;
+        PushConnectionState();
+    }
+
+    (void)device; // name already used above
+}
+
+void App::OnDeviceLost(const std::string& displayName) {
+    LOG_INFO("App: DeviceLost '" + displayName + "'.");
+
+    const auto all = m_deviceDiscovery->GetDevices();
+    m_visibleDevices.clear();
+    for (const auto& d : all) {
+        if (d.state != DeviceState::Available) continue;
+        if (d.role  == DeviceRole::Receiver)   continue;
+        m_visibleDevices.push_back(d);
+    }
+
+    if (m_selectedDeviceIndex >= static_cast<int>(m_visibleDevices.size()))
+        m_selectedDeviceIndex = -1;
+
+    if (m_window) {
+        m_window->UpdateDeviceList(m_visibleDevices);
+
+        // If the lost device was selected and we were waiting, update state.
+        if (m_connState == ConnectionState::WaitingClient && m_visibleDevices.empty())
+            m_connState = ConnectionState::Idle;
+
+        PushConnectionState();
+    }
+}
+
+// ---------------------------------------------------------------------------
+// M17 UI action callbacks — called from main thread (WM_COMMAND)
+// ---------------------------------------------------------------------------
+
+void App::OnDeviceSelected(int index) {
+    m_selectedDeviceIndex = index;
+    LOG_INFO("App: Device selected index=" + std::to_string(index));
+
+    // Enable Connect when a device is selected and we're not already connected.
+    if (m_connState == ConnectionState::Idle ||
+        m_connState == ConnectionState::Discovering) {
+        PushConnectionState();
+    }
+}
+
+void App::OnConnectClicked() {
+    // Windows is the TCP server — it accepts connections from the iPhone.
+    // "Connect" sets the state to WaitingClient so the user gets feedback.
+    // The server is already listening (StartServer was called in App::App()).
+    // If the server had been stopped (after Disconnect), restart it.
+    if (m_network && !m_network->IsClientConnected()) {
+        // Re-start the server if it is not currently running.
+        // StopServer + StartServer is the cleanest way to reset.
+        m_network->StopServer();
+        if (!m_network->StartServer(Protocol::CONTROL_TCP_PORT)) {
+            LOG_WARN("App: OnConnectClicked: failed to restart server.");
+            m_connState = ConnectionState::Error;
+            PushConnectionState();
+            return;
+        }
+    }
+
+    m_connState = ConnectionState::WaitingClient;
+    PushConnectionState();
+
+    LOG_INFO("App: Ready — waiting for iPhone to connect on TCP :" +
+             std::to_string(Protocol::CONTROL_TCP_PORT));
+}
+
+void App::OnDisconnectClicked() {
+    if (!m_network) return;
+
+    LOG_INFO("App: Disconnect requested.");
+    m_network->StopServer();
+    m_connState = ConnectionState::Idle;
+    PushConnectionState();
+
+    // Reset A/V sync for the next session.
+    if (m_avSync) m_avSync->Reset();
+
+    // Restart listening immediately so the next connection can arrive.
+    if (!m_network->StartServer(Protocol::CONTROL_TCP_PORT)) {
+        LOG_WARN("App: Failed to re-listen after disconnect.");
+        m_connState = ConnectionState::Error;
+        PushConnectionState();
+    }
+}
+
+void App::OnManualConnect(const std::string& ip, const std::string& port) {
+    // Windows is the server — manual IP/port on this side is stored for
+    // reference / display only. Log it and update status.
+    LOG_INFO("App: Manual endpoint set to " + ip + ":" + port);
+    // Nothing more to do — the server already listens on 5000.
+    // The iPhone must connect to our IP on port 5000.
+}
+
+// ---------------------------------------------------------------------------
+// UpdateStatusOverlay — M16 legacy (kept so the text overlay still works).
+// The text is now set via UpdateStreamStats → RebuildStatText.
+// ---------------------------------------------------------------------------
+
+void App::UpdateStatusOverlay() {
+    // This method is now a no-op; M17 routes everything through
+    // UpdateStreamStats and PushConnectionState.
 }
 
 } // namespace SanskyStream
