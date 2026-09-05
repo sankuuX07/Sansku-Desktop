@@ -1,5 +1,6 @@
 #include "AudioReceiver.h"
 #include "AVSynchronizer.h"
+#include "OBSBridge.h"   // M14
 #include "Logger.h"
 #include "Protocol.h"
 
@@ -27,6 +28,15 @@ AudioReceiver::~AudioReceiver() { Stop(); }
 void AudioReceiver::SetAVSync(AVSynchronizer* sync)
 {
     m_avSync = sync;
+}
+
+// ---------------------------------------------------------------------------
+// SetOBSBridge (M14)
+// ---------------------------------------------------------------------------
+
+void AudioReceiver::SetOBSBridge(OBSBridge* bridge)
+{
+    m_obsBridge = bridge;
 }
 
 // ---------------------------------------------------------------------------
@@ -169,6 +179,19 @@ void AudioReceiver::OnDecodedAudio(DecodedAudioPacket packet)
     // m_lastAudioPtsUs for drift detection.
     if (m_avSync && packet.timestampUs > 0) {
         m_avSync->NotifyAudioTimestamp(packet.timestampUs);
+    }
+
+    // M14: push the decoded PCM to the OBS shared-memory bridge so the
+    // sansky-source OBS plugin can consume it.  This uses the same decoded
+    // buffer — no second decode, no extra buffering.  Called after
+    // NotifyAudioTimestamp so the AVSync clock is current when OBS reads it.
+    if (m_obsBridge && !packet.pcmData.empty()) {
+        m_obsBridge->PushAudioData(
+            packet.pcmData.data(),
+            packet.pcmData.size(),
+            packet.sampleRate,
+            packet.channelCount,
+            packet.timestampUs);
     }
 
     // Submit PCM to the player's ring buffer.

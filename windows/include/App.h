@@ -8,6 +8,7 @@
 #include "VideoFrameQueue.h"
 #include "AudioReceiver.h"
 #include "AVSynchronizer.h"
+#include "OBSBridge.h"       // M14: shared-memory IPC bridge to OBS plugin
 #include "PipelineStats.h"  // M13: lightweight periodic pipeline diagnostics
 
 #include <memory>
@@ -35,6 +36,10 @@ private:
     // M12: A/V synchronizer — owned here, shared (non-owning) with VideoReceiver,
     // AudioReceiver, and Renderer.  Must be constructed before those components.
     std::unique_ptr<AVSynchronizer>    m_avSync;            // M12: master A/V clock
+
+    // M14: OBS shared-memory bridge — must be declared before m_videoReceiver and
+    // m_audioReceiver so it is destroyed AFTER both stop writing to the segment.
+    std::unique_ptr<OBSBridge>         m_obsBridge;         // M14: shmem IPC to OBS plugin
 
     std::unique_ptr<Window>            m_window;
     std::unique_ptr<Renderer>          m_renderer;

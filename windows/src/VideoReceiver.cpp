@@ -1,5 +1,6 @@
 #include "VideoReceiver.h"
 #include "AVSynchronizer.h"
+#include "OBSBridge.h"   // M14
 #include "Logger.h"
 
 #include <cstdint>
@@ -29,6 +30,14 @@ void VideoReceiver::SetFrameQueue(VideoFrameQueue* queue) {
 
 void VideoReceiver::SetAVSync(AVSynchronizer* sync) {
     m_avSync = sync;
+}
+
+// ---------------------------------------------------------------------------
+// Public API — SetOBSBridge (M14)
+// ---------------------------------------------------------------------------
+
+void VideoReceiver::SetOBSBridge(OBSBridge* bridge) {
+    m_obsBridge = bridge;
 }
 
 // ---------------------------------------------------------------------------
@@ -83,6 +92,20 @@ void VideoReceiver::OnDecodedFrame(DecodedFrame frame)
             ++m_framesDropped; // M13: track for periodic stats
             return;
         }
+    }
+
+    // M14: push the sync-gated NV12 frame to the OBS shared-memory bridge.
+    // This is the same decoded frame that goes to the renderer — no second
+    // decode, no extra buffering.  OBSBridge::PushVideoFrame uses a seqlock
+    // write so the OBS plugin can read it lock-free from obs64.exe.
+    if (m_obsBridge) {
+        const int64_t avDiffUs = m_avSync ? m_avSync->GetStats().avDiffUs : 0;
+        m_obsBridge->PushVideoFrame(
+            frame.nv12Data.data(),
+            frame.width,
+            frame.height,
+            frame.presentationUs,
+            avDiffUs);
     }
 
     // M8: forward to Renderer via the shared frame queue.

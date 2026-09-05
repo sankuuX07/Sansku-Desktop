@@ -11,6 +11,7 @@ namespace SanskyStream {
 
 // Forward declaration — keeps AVSynchronizer.h out of this header.
 class AVSynchronizer;
+class OBSBridge;   // M14: forward declaration keeps OBSBridge.h out of this header
 
 // ---------------------------------------------------------------------------
 // AudioReceiver — M11 / M12
@@ -47,6 +48,12 @@ public:
     // Must be called before Start() if sync is desired.
     // Pass nullptr to disable (pre-M12 behaviour).
     void SetAVSync(AVSynchronizer* sync);
+
+    // Connect the OBS shared-memory bridge (M14).
+    // When set, every decoded PCM chunk is also written to the OBS shmem
+    // segment for the sansky-source OBS plugin to consume.
+    // Non-owning; pass nullptr to disable OBS audio output.
+    void SetOBSBridge(OBSBridge* bridge);
 
     // Initialize decoder + player and start playback.
     // sampleRate/channelCount: expected iOS audio format.
@@ -85,7 +92,11 @@ private:
 
     // Non-owning pointer to the shared AVSynchronizer (owned by App).
     // Null until SetAVSync() is called.
-    AVSynchronizer* m_avSync = nullptr;
+    AVSynchronizer* m_avSync   = nullptr;
+
+    // Non-owning pointer to OBSBridge (owned by App). M14.
+    // Null until SetOBSBridge() is called.
+    OBSBridge*      m_obsBridge = nullptr;
 
     bool     m_running         = false;
     uint64_t m_packetsReceived = 0;

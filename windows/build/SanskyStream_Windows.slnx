@@ -16,6 +16,7 @@
 		<BuildDependency Project="TestRenderPipeline.vcxproj"/>
 		<BuildDependency Project="TestVideoSender.vcxproj"/>
 		<BuildDependency Project="ZERO_CHECK.vcxproj"/>
+		<BuildDependency Project="sansky-source.vcxproj"/>
 		<Build Solution="Debug|*" Project="false"/>
 		<Build Solution="Release|*" Project="false"/>
 		<Build Solution="MinSizeRel|*" Project="false"/>
@@ -43,4 +44,7 @@
 		<BuildDependency Project="ZERO_CHECK.vcxproj"/>
 	</Project>
 	<Project Path="ZERO_CHECK.vcxproj" Type="8bc9ceb8-8b4a-11d0-8d11-00a0c91bc942" Id="3eab3501-6d51-34eb-af58-587734b2b11d"/>
+	<Project Path="sansky-source.vcxproj" Type="8bc9ceb8-8b4a-11d0-8d11-00a0c91bc942" Id="ce00c9d9-8a2a-3a93-b65d-1e608670b1dc">
+		<BuildDependency Project="ZERO_CHECK.vcxproj"/>
+	</Project>
 </Solution>

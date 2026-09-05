@@ -46,6 +46,9 @@
     <ClCompile Include="C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\src\Renderer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\src\OBSBridge.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="C:\Users\sansk\OneDrive\Desktop\SanskyStream\windows\src\Logger.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

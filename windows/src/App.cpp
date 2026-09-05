@@ -18,6 +18,20 @@ App::App() : m_isRunning(true) {
     m_avSync = std::make_unique<AVSynchronizer>();
 
     // -----------------------------------------------------------------------
+    // M14: OBS Bridge — creates the named shared memory segment that the
+    // OBS plugin (sansky-source.dll) reads.  Non-fatal: if OBS is not
+    // installed or CreateFileMapping fails, the pipeline continues normally.
+    // Must be constructed before VideoReceiver and AudioReceiver so it is
+    // valid when those components call SetOBSBridge().
+    // -----------------------------------------------------------------------
+    m_obsBridge = std::make_unique<OBSBridge>();
+    if (m_obsBridge->IsReady()) {
+        LOG_INFO("App: OBSBridge ready. OBS plugin can connect.");
+    } else {
+        LOG_WARN("App: OBSBridge not available. OBS integration disabled.");
+    }
+
+    // -----------------------------------------------------------------------
     // Window
     // -----------------------------------------------------------------------
     m_window = std::make_unique<Window>(1280, 720, L"SanskyStream Client");
@@ -51,7 +65,8 @@ App::App() : m_isRunning(true) {
     // -----------------------------------------------------------------------
     m_videoReceiver = std::make_unique<VideoReceiver>();
     m_videoReceiver->SetFrameQueue(m_frameQueue.get());
-    m_videoReceiver->SetAVSync(m_avSync.get());  // M12
+    m_videoReceiver->SetAVSync(m_avSync.get());   // M12
+    m_videoReceiver->SetOBSBridge(m_obsBridge.get()); // M14: forward decoded frames to OBS shmem
     m_renderer->SetFrameQueue(m_frameQueue.get());
 
     // -----------------------------------------------------------------------
@@ -71,7 +86,8 @@ App::App() : m_isRunning(true) {
     // M12: wire AVSynchronizer so decoded audio timestamps anchor the clock.
     // -----------------------------------------------------------------------
     m_audioReceiver = std::make_unique<AudioReceiver>();
-    m_audioReceiver->SetAVSync(m_avSync.get());  // M12 — must be set before Start()
+    m_audioReceiver->SetAVSync(m_avSync.get());        // M12 — must be set before Start()
+    m_audioReceiver->SetOBSBridge(m_obsBridge.get()); // M14: forward decoded PCM to OBS shmem
     if (!m_audioReceiver->Start(Protocol::AUDIO_DEFAULT_SAMPLE_RATE,
                                 Protocol::AUDIO_DEFAULT_CHANNELS)) {
         LOG_WARN("AudioReceiver failed to start. Audio playback disabled.");
