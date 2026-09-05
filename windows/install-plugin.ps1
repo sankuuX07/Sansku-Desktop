@@ -1,4 +1,4 @@
-﻿<#
+<#
 .SYNOPSIS
     Installs sansky-source.dll into OBS Studio.
 
@@ -36,7 +36,7 @@ if (-not (Test-Path $DllPath)) {
     Write-Error (
         "sansky-source.dll not found at '$DllPath'.`n" +
         "Build it first:`n" +
-        "  cmake -B build -G 'Visual Studio 17 2022' -A x64 .`n" +
+        "  cmake -B build -G 'Visual Studio 18 2026' -A x64 .`n" +
         "  cmake --build build --config Release --target sansky-source"
     )
 }
