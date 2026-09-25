@@ -1,0 +1,14 @@
+# Android build outputs and Gradle caches — DO NOT commit these
+.gradle/
+build/
+local.properties
+*.apk
+*.aab
+*.ap_
+*.dex
+*.class
+*.hprof
+
+# IDE
+.idea/
+*.iml
