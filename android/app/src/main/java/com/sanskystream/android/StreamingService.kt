@@ -127,6 +127,53 @@ class StreamingService : Service() {
         }
     }
 
+    /**
+     * TCP reconnect monitor — runs on the network executor thread after streaming starts.
+     *
+     * The MediaProjection / VirtualDisplay / VideoEncoder are NOT touched during
+     * reconnect: they keep running so the encoder state (SPS/PPS) remains valid.
+     * Only the TCP socket and AudioTransport reference need re-establishment.
+     *
+     * Attempts up to RECONNECT_MAX_ATTEMPTS with RECONNECT_INTERVAL_MS between tries.
+     * If all attempts fail, stops the service.
+     */
+    private fun runTcpReconnectMonitor(windowsHost: String) {
+        var attempt = 0
+        while (streaming && attempt < RECONNECT_MAX_ATTEMPTS) {
+            val tcp = tcpChannel ?: break
+            if (!tcp.isConnected) {
+                attempt++
+                broadcastStatus("Reconnecting ($attempt/$RECONNECT_MAX_ATTEMPTS)...")
+                updateNotification("Reconnecting ($attempt/$RECONNECT_MAX_ATTEMPTS)")
+                Log.i(TAG, "TCP dropped. Reconnect attempt $attempt/$RECONNECT_MAX_ATTEMPTS")
+
+                val newTcp = TcpControlChannel()
+                if (newTcp.connect(windowsHost)) {
+                    // Swap in the new channel atomically.
+                    tcpChannel   = newTcp
+                    audioTransport = AudioTransport(newTcp)
+                    tcp.close()  // close the old broken socket
+                    attempt = 0  // reset counter on success
+                    broadcastStatus("Reconnected — streaming to $windowsHost")
+                    updateNotification("Streaming to $windowsHost")
+                    Log.i(TAG, "TCP reconnected to $windowsHost")
+                } else {
+                    newTcp.close()
+                    Thread.sleep(RECONNECT_INTERVAL_MS)
+                }
+            } else {
+                // Connection healthy — poll every 500 ms.
+                Thread.sleep(500)
+            }
+        }
+
+        if (streaming && attempt >= RECONNECT_MAX_ATTEMPTS) {
+            Log.e(TAG, "TCP reconnect exhausted after $RECONNECT_MAX_ATTEMPTS attempts. Stopping.")
+            broadcastStatus("Stopped: lost connection to $windowsHost")
+            stopSelf()
+        }
+    }
+
     private fun doStartStreaming(resultCode: Int, dataIntent: Intent, windowsHost: String) {
         broadcastStatus("Connecting to $windowsHost...")
 
@@ -222,6 +269,11 @@ class StreamingService : Service() {
         broadcastStatus("Streaming to $windowsHost")
         updateNotification("Streaming to $windowsHost")
         Log.i(TAG, "Streaming started.")
+
+        // Block the network executor thread on the reconnect monitor.
+        // This keeps the executor busy (so it doesn't terminate) and monitors
+        // the TCP channel for drops, reconnecting transparently.
+        runTcpReconnectMonitor(windowsHost)
     }
 
     private fun stopStreaming() {
@@ -292,5 +344,11 @@ class StreamingService : Service() {
     companion object {
         const val ACTION_STATUS_UPDATE = "com.sanskystream.android.STATUS_UPDATE"
         const val EXTRA_STATUS         = "status"
+
+        // TCP reconnect policy:
+        //   3 s between attempts × 30 max = up to 90 s of reconnect attempts.
+        //   After 90 s of broken TCP, the service stops itself.
+        private const val RECONNECT_INTERVAL_MS:  Long = 3_000L
+        private const val RECONNECT_MAX_ATTEMPTS: Int  = 30
     }
 }

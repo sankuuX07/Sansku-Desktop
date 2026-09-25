@@ -27,12 +27,14 @@ android {
         }
     }
 
+    // Java 11 compatibility: avoids JDK-24 "obsolete source/target 8" warning.
+    // All Android 26+ targets benefit from Java 11 language features.
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
     }
     kotlinOptions {
-        jvmTarget = '1.8'
+        jvmTarget = '11'
     }
 
     buildFeatures {
