@@ -10,6 +10,7 @@
 	<Project Path="ALL_BUILD.vcxproj" Type="8bc9ceb8-8b4a-11d0-8d11-00a0c91bc942" Id="83ca85e7-771a-3c2b-a20e-ad08cf4fccfe" DefaultStartup="true">
 		<BuildDependency Project="SanskyStream_Windows.vcxproj"/>
 		<BuildDependency Project="TestAVSync.vcxproj"/>
+		<BuildDependency Project="TestAndroidSender.vcxproj"/>
 		<BuildDependency Project="TestAudioPipeline.vcxproj"/>
 		<BuildDependency Project="TestDecoder.vcxproj"/>
 		<BuildDependency Project="TestDiscovery.vcxproj"/>
@@ -27,6 +28,9 @@
 		<BuildDependency Project="ZERO_CHECK.vcxproj"/>
 	</Project>
 	<Project Path="TestAVSync.vcxproj" Type="8bc9ceb8-8b4a-11d0-8d11-00a0c91bc942" Id="3396f065-3cfd-3391-821d-c2ebc9bace1b">
+		<BuildDependency Project="ZERO_CHECK.vcxproj"/>
+	</Project>
+	<Project Path="TestAndroidSender.vcxproj" Type="8bc9ceb8-8b4a-11d0-8d11-00a0c91bc942" Id="c2f899cd-74de-38ad-8161-d458e58e77a7">
 		<BuildDependency Project="ZERO_CHECK.vcxproj"/>
 	</Project>
 	<Project Path="TestAudioPipeline.vcxproj" Type="8bc9ceb8-8b4a-11d0-8d11-00a0c91bc942" Id="4790752a-f65f-3375-9bcf-579c174f58e1">
