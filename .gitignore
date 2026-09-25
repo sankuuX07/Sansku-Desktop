@@ -1,9 +1,45 @@
+# ===========================================================================
+# SanskyStream â€” root .gitignore
+# ===========================================================================
 
-# OBS SDK — acquired via setup-obs-sdk.ps1 (not committed)
+# ---------------------------------------------------------------------------
+# Windows build artifacts (CMake / MSBuild / MSVC)
+# ---------------------------------------------------------------------------
+windows/build/
+*.obj
+*.pdb
+*.exp
+*.ilk
+*.tlog
+
+# ---------------------------------------------------------------------------
+# Android build artifacts and Gradle caches
+# ---------------------------------------------------------------------------
+android/build/
+android/.gradle/
+android/app/build/
+android/local.properties
+
+# ---------------------------------------------------------------------------
+# OBS SDK â€” acquired via setup-obs-sdk.ps1, never committed
+# ---------------------------------------------------------------------------
 windows/obs-sdk/libobs/
 windows/obs-sdk/bin/
 windows/obs-sdk/obs.lib
 windows/obs-sdk/obs.exp
 
-# OBS Plugin build output — not committed
+# OBS Plugin build output
 windows/obs-plugin/build/
+
+# ---------------------------------------------------------------------------
+# IDE / editor artifacts
+# ---------------------------------------------------------------------------
+.idea/
+*.iml
+.vs/
+*.user
+*.suo
+*.sdf
+*.opensdf
+.DS_Store
+Thumbs.db
