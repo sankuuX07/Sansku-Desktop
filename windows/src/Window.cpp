@@ -350,9 +350,17 @@ void Window::UpdateDeviceList(const std::vector<DiscoveredDevice>& devices) {
         if (d.state != DeviceState::Available) continue;
         if (d.role  == DeviceRole::Receiver)   continue; // skip ourselves
 
-        // Build display string: "📱 <name>   <ip>:<port>"
-        // Use plain ASCII since LISTBOX is ANSI by default; we'll use wide API.
-        std::string line = d.displayName;
+        // M18: Build display string with optional platform badge.
+        //   "[Android] <name>   <ip>:<port>"
+        //   "[iOS] <name>   <ip>:<port>"      (for future iOS devices that send platform=ios)
+        //   "<name>   <ip>:<port>"            (unknown platform — existing behavior)
+        std::string line;
+        if (d.platform == DevicePlatform::Android) {
+            line = "[Android] ";
+        } else if (d.platform == DevicePlatform::iOS) {
+            line = "[iOS] ";
+        }
+        line += d.displayName;
         if (!d.ipAddress.empty()) {
             line += "   ";
             line += d.ipAddress;

@@ -440,8 +440,9 @@ void DeviceDiscovery::OnServiceResolved(const std::wstring& /*instanceName*/,
     dev.state = DeviceState::Available;
 
     // Parse TXT records.
-    const std::string verStr  = GetTxtValue(pInstance, L"ver");
-    const std::string roleStr = GetTxtValue(pInstance, L"role");
+    const std::string verStr      = GetTxtValue(pInstance, L"ver");
+    const std::string roleStr     = GetTxtValue(pInstance, L"role");
+    const std::string platformStr = GetTxtValue(pInstance, L"platform"); // M18
 
     if (!verStr.empty()) {
         try {
@@ -451,6 +452,15 @@ void DeviceDiscovery::OnServiceResolved(const std::wstring& /*instanceName*/,
         }
     }
     dev.role = ParseRole(roleStr);
+
+    // M18: Parse optional platform TXT key (backward-compatible — absent = Unknown).
+    if (platformStr == "android") {
+        dev.platform = DevicePlatform::Android;
+    } else if (platformStr == "ios") {
+        dev.platform = DevicePlatform::iOS;
+    } else {
+        dev.platform = DevicePlatform::Unknown;
+    }
 
     // Reject invalid devices.
     if (!IsValidDevice(dev)) {
@@ -465,8 +475,14 @@ void DeviceDiscovery::OnServiceResolved(const std::wstring& /*instanceName*/,
         return;
     }
 
+    // Build platform label for log.
+    const std::string platLabel =
+        (dev.platform == DevicePlatform::Android) ? "Android" :
+        (dev.platform == DevicePlatform::iOS)     ? "iOS"     : "unknown";
+
     LOG_INFO("DeviceDiscovery: Found '" + dev.displayName +
              "' role=" + roleStr +
+             " platform=" + platLabel +
              " at " + dev.ipAddress + ":" + std::to_string(dev.port) +
              " ver=" + std::to_string(dev.protocolVersion));
 
