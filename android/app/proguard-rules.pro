@@ -1,0 +1,1 @@
+# SanskyStream Android proguard rules

@@ -1,0 +1,50 @@
+[
+    {
+        "merged": "com.sanskystream.android.app-debug-33:/mipmap-mdpi_ic_launcher_round.png.flat",
+        "source": "com.sanskystream.android.app-main-35:/mipmap-mdpi/ic_launcher_round.png"
+    },
+    {
+        "merged": "com.sanskystream.android.app-debug-33:/mipmap-xxhdpi_ic_launcher.png.flat",
+        "source": "com.sanskystream.android.app-main-35:/mipmap-xxhdpi/ic_launcher.png"
+    },
+    {
+        "merged": "com.sanskystream.android.app-debug-33:/mipmap-mdpi_ic_launcher.png.flat",
+        "source": "com.sanskystream.android.app-main-35:/mipmap-mdpi/ic_launcher.png"
+    },
+    {
+        "merged": "com.sanskystream.android.app-debug-33:/mipmap-xxxhdpi_ic_launcher.png.flat",
+        "source": "com.sanskystream.android.app-main-35:/mipmap-xxxhdpi/ic_launcher.png"
+    },
+    {
+        "merged": "com.sanskystream.android.app-debug-33:/mipmap-hdpi_ic_launcher.png.flat",
+        "source": "com.sanskystream.android.app-main-35:/mipmap-hdpi/ic_launcher.png"
+    },
+    {
+        "merged": "com.sanskystream.android.app-debug-33:/mipmap-xxxhdpi_ic_launcher_round.png.flat",
+        "source": "com.sanskystream.android.app-main-35:/mipmap-xxxhdpi/ic_launcher_round.png"
+    },
+    {
+        "merged": "com.sanskystream.android.app-debug-33:/mipmap-xhdpi_ic_launcher.png.flat",
+        "source": "com.sanskystream.android.app-main-35:/mipmap-xhdpi/ic_launcher.png"
+    },
+    {
+        "merged": "com.sanskystream.android.app-debug-33:/mipmap-hdpi_ic_launcher_round.png.flat",
+        "source": "com.sanskystream.android.app-main-35:/mipmap-hdpi/ic_launcher_round.png"
+    },
+    {
+        "merged": "com.sanskystream.android.app-debug-33:/mipmap-xhdpi_ic_launcher_round.png.flat",
+        "source": "com.sanskystream.android.app-main-35:/mipmap-xhdpi/ic_launcher_round.png"
+    },
+    {
+        "merged": "com.sanskystream.android.app-debug-33:/drawable_edit_text_bg.xml.flat",
+        "source": "com.sanskystream.android.app-main-35:/drawable/edit_text_bg.xml"
+    },
+    {
+        "merged": "com.sanskystream.android.app-debug-33:/mipmap-xxhdpi_ic_launcher_round.png.flat",
+        "source": "com.sanskystream.android.app-main-35:/mipmap-xxhdpi/ic_launcher_round.png"
+    },
+    {
+        "merged": "com.sanskystream.android.app-debug-33:/layout_activity_main.xml.flat",
+        "source": "com.sanskystream.android.app-main-35:/layout/activity_main.xml"
+    }
+]

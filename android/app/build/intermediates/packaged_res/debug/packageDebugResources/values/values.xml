@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">SanskyStream</string>
+    <style name="Theme.SanskyStream" parent="Theme.MaterialComponents.DayNight.DarkActionBar">
+        <item name="colorPrimary">#3B82F6</item>
+        <item name="colorPrimaryVariant">#1D4ED8</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="colorSurface">#0F121E</item>
+        <item name="android:windowBackground">#0F121E</item>
+        <item name="android:statusBarColor">#0F121E</item>
+        <item name="android:navigationBarColor">#0F121E</item>
+    </style>
+</resources>

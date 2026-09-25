@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- ======================================================
+         SanskyStream Android — M18
+         Permissions documentation:
+           INTERNET           - UDP/TCP socket to Windows receiver
+           FOREGROUND_SERVICE - Required for background screen capture (API 26+)
+           FOREGROUND_SERVICE_MEDIA_PROJECTION - API 34+ explicit type required
+           RECORD_AUDIO       - Internal audio capture (AudioPlaybackCapture, API 29+)
+                                Note: captures app/game audio, NOT microphone.
+                                Android requires RECORD_AUDIO permission for
+                                AudioPlaybackCapture even though no mic is used.
+    ====================================================== -->
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.SanskyStream">
+
+        <!-- Main activity: MediaProjection permission flow + stream control UI -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:configChanges="orientation|screenSize|screenLayout"
+            android:screenOrientation="unspecified">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- Foreground service: owns MediaProjection + encoder + network sockets -->
+        <service
+            android:name=".StreamingService"
+            android:exported="false"
+            android:foregroundServiceType="mediaProjection" />
+
+    </application>
+
+</manifest>

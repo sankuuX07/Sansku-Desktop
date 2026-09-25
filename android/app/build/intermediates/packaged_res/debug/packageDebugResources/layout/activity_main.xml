@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:gravity="center_horizontal"
+    android:background="#0F121E">
+
+    <TextView
+        android:id="@+id/tvAppTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="40dp"
+        android:text="@string/app_name"
+        android:textSize="32sp"
+        android:textStyle="bold"
+        android:textColor="#D2D7E6" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:layout_marginBottom="32dp"
+        android:text="Android Screen Streaming"
+        android:textSize="14sp"
+        android:textColor="#6B7A99" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Windows PC IP Address"
+        android:textColor="#6B7A99"
+        android:textSize="12sp"
+        android:layout_marginBottom="6dp" />
+
+    <EditText
+        android:id="@+id/etWindowsHost"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:hint="192.168.x.x"
+        android:inputType="textNoSuggestions"
+        android:textColor="#D2D7E6"
+        android:textColorHint="#4A5568"
+        android:background="@drawable/edit_text_bg"
+        android:paddingLeft="12dp"
+        android:paddingRight="12dp"
+        android:textSize="16sp"
+        android:layout_marginBottom="24dp" />
+
+    <TextView
+        android:id="@+id/tvStatus"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:minHeight="60dp"
+        android:gravity="center"
+        android:text="Ready"
+        android:textColor="#50D282"
+        android:textSize="14sp"
+        android:padding="12dp"
+        android:background="#161B2A"
+        android:layout_marginBottom="24dp" />
+
+    <Button
+        android:id="@+id/btnStartStreaming"
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:text="Start Streaming"
+        android:textColor="#FFFFFF"
+        android:textSize="16sp"
+        android:backgroundTint="#3B82F6"
+        android:layout_marginBottom="12dp" />
+
+    <Button
+        android:id="@+id/btnStopStreaming"
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:text="Stop Streaming"
+        android:textColor="#FFFFFF"
+        android:textSize="16sp"
+        android:backgroundTint="#DC2626"
+        android:enabled="false"
+        android:layout_marginBottom="24dp" />
+
+    <TextView
+        android:id="@+id/tvPermissions"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Checking permissions..."
+        android:textColor="#6B7A99"
+        android:textSize="12sp"
+        android:padding="12dp"
+        android:background="#0D1018"
+        android:layout_marginBottom="16dp" />
+
+</LinearLayout>
