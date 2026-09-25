@@ -1,4 +1,4 @@
-﻿package com.sanskystream.android
+package com.sanskystream.android
 
 // ---------------------------------------------------------------------------
 // StreamingService.kt — M18: Foreground Service orchestrating all streaming
@@ -83,7 +83,12 @@ class StreamingService : Service() {
         if (intent == null) { stopSelf(); return START_NOT_STICKY }
 
         val resultCode  = intent.getIntExtra(EXTRA_RESULT_CODE, -1)
-        val dataIntent  = intent.getParcelableExtra<Intent>(EXTRA_DATA_INTENT)
+        val dataIntent  = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            intent.getParcelableExtra(EXTRA_DATA_INTENT, Intent::class.java)
+        } else {
+            @Suppress("DEPRECATION")
+            intent.getParcelableExtra(EXTRA_DATA_INTENT)
+        }
         val windowsHost = intent.getStringExtra(EXTRA_WINDOWS_HOST) ?: ""
 
         if (dataIntent == null || windowsHost.isEmpty()) {

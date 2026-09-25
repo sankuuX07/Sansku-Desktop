@@ -1,4 +1,4 @@
-﻿package com.sanskystream.android
+package com.sanskystream.android
 
 // ---------------------------------------------------------------------------
 // AudioCapture.kt — M18: Android Audio Capture
@@ -141,7 +141,6 @@ class AudioCapture(
         // 20 ms buffer at 44100 Hz stereo 16-bit = 44100*0.020*2*2 = 3528 bytes
         val readSize = (SAMPLE_RATE * CHANNEL_COUNT * 2 * 20) / 1000
         val pcmBuf   = ByteArray(readSize)
-        var startTimeUs = System.nanoTime() / 1000L
 
         while (running) {
             val read = audioRecord?.read(pcmBuf, 0, readSize) ?: -1

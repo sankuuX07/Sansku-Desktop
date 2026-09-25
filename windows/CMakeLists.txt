@@ -280,7 +280,42 @@ if(MSVC)
 endif()
 
 # ---------------------------------------------------------------------------
-# sansky-source -- OBS Studio async source plugin (M14)
+# TestAndroidSender — M18 Android pipeline simulation tool.
+#
+# Simulates the SanskyStream Android app (TcpControlChannel + VideoTransport
+# + AudioTransport) sending audio and video to SanskyStream_Windows.
+# Exercises the full Windows receive pipeline without a physical Android device.
+#
+# Tests:
+#   TCP connect/disconnect/reconnect on port 5000
+#   Audio AAC packets (PacketHeader + AudioPayloadHeader)
+#   Single/multi-fragment video UDP on port 5001
+#   Edge cases: bad magic, zero-payload, oversized frame
+#
+# Usage:
+#   cmake --build . --config Release --target TestAndroidSender
+#   .\\Release\\TestAndroidSender.exe [host [tcp_port [udp_port]]]
+#   Default: 127.0.0.1  5000  5001
+# ---------------------------------------------------------------------------
+add_executable(TestAndroidSender
+    src/TestAndroidSender.cpp
+    src/Logger.cpp
+)
+
+target_include_directories(TestAndroidSender PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/../protocol
+)
+
+target_link_libraries(TestAndroidSender PRIVATE ws2_32)
+
+if(MSVC)
+    target_compile_options(TestAndroidSender PRIVATE /W4 /WX /EHsc)
+    target_compile_definitions(TestAndroidSender PRIVATE
+        UNICODE _UNICODE WIN32_LEAN_AND_MEAN NOMINMAX)
+endif()
+
+
 #
 # Runs inside obs64.exe as obs-plugins/64bit/sansky-source.dll.
 # Reads video (NV12) and audio (PCM16) from the named shared memory segment
