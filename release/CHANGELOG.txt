@@ -1,0 +1,76 @@
+CHANGELOG
+=========
+
+SanskyStream 1.0.0 — 2026-09-26
+---------------------------------
+
+INITIAL RELEASE
+
+Windows Application (M1-M17)
+  + Win32/Direct3D 11 application foundation
+  + TCP server receiver (port 5000) for control and audio
+  + UDP receiver (port 5001) for low-latency H.264 video
+  + Media Foundation H.264 hardware-accelerated decoder
+  + Direct3D 11 NV12 texture renderer with aspect-ratio preservation
+  + Media Foundation AAC-LC audio decoder
+  + WASAPI event-driven audio playback
+  + A/V synchronization engine (M12)
+  + Low-latency pipeline: TCP_NODELAY, single-slot frame queue,
+    bounded audio buffer, no unnecessary frame copies (M13)
+  + OBS Studio plugin (sansky-source.dll) via shared memory (M14)
+  + mDNS/DNS-SD device discovery — _sanskystream._tcp (M16)
+  + Platform badge UI: [iOS] / [Android] device identification
+  + Settings: manual IP entry, discovery toggle (M17)
+
+iPhone / iOS (M3-M10)
+  + ReplayKit broadcast extension for screen capture
+  + VideoToolbox H.264 encoder
+  + UDP H.264 video transport with fragment reassembly
+  + AVAudioEngine microphone + system audio capture
+  + AudioToolbox AAC-LC encoder
+  + TCP audio transport
+  + Bonjour mDNS service advertisement
+
+  STATUS: Source complete. Physical end-to-end testing PENDING.
+          Mac/Xcode required to build and deploy.
+
+Android (M18)
+  + MediaProjection + VirtualDisplay screen capture
+  + MediaCodec H.264 encoder (async Surface mode)
+  + UDP video transport — identical wire format to iOS
+  + AudioPlaybackCapture internal audio (Android 10+)
+  + MediaCodec AAC-LC audio encoder
+  + TCP audio transport
+  + NSD mDNS service advertisement (platform=android TXT key)
+  + TCP reconnect monitor (30 attempts, 3s interval)
+
+  STATUS: APK builds successfully. Physical end-to-end testing PENDING.
+          No physical Android device was available during development.
+
+Testing (M19)
+  + 47/47 automated and statically-verifiable tests PASS
+  + TCP connect/disconnect/reconnect: 7/7 PASS
+  + Protocol constant parity (Protocol.h vs Protocol.kt): 10/10 verified
+  + Build outputs: 11/11 present and correct
+  + Windows application startup: PASS
+  + Portable release: PASS
+
+KNOWN LIMITATIONS IN THIS RELEASE
+-----------------------------------
+
+  - iPhone physical streaming: NOT TESTED (Mac/Xcode unavailable)
+  - Android physical streaming: NOT TESTED (no physical device)
+  - OBS live end-to-end streaming: NOT TESTED (physical stream required)
+  - 15-minute sustained stability test: NOT TESTED (physical stream required)
+  - Android APK: UNSIGNED (debug-signed release build, requires Unknown Sources)
+  - Device Guard: Automated test harnesses blocked on the build machine
+    (all test EXEs compile and link correctly; pipeline tested via .NET sockets)
+
+NEXT STEPS (POST-RELEASE)
+--------------------------
+
+  - Physical iPhone test when Mac/Xcode environment is available
+  - Physical Android device test when hardware is available
+  - Live OBS validation with real phone stream
+  - Production signing for Android APK (requires keystore)
+  - Long-duration (15+ min) streaming stability test
